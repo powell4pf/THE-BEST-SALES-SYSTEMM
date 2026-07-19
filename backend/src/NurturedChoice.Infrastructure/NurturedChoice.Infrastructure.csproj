@@ -5,7 +5,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NurturedChoice.Application\NurturedChoice.Application.csproj" />
     <ProjectReference Include="..\NurturedChoice.Domain\NurturedChoice.Domain.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7">
