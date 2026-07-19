@@ -2,16 +2,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /source
 
-# Copy csproj and restore as distinct layers
-# Copy the solution file first to leverage the build cache.
-COPY *.sln .
+# Copy the solution file and restore dependencies. This creates a cached layer.
+COPY NurturedChoice.sln .
+COPY src/NurturedChoice.Api/*.csproj ./src/NurturedChoice.Api/
+COPY src/NurturedChoice.Application/*.csproj ./src/NurturedChoice.Application/
+COPY src/NurturedChoice.Domain/*.csproj ./src/NurturedChoice.Domain/
+COPY src/NurturedChoice.Infrastructure/*.csproj ./src/NurturedChoice.Infrastructure/
+RUN dotnet restore NurturedChoice.sln
 
-# Copy the entire src directory. This is more robust and ensures the build context is identical to your local setup.
-COPY src/ ./src/
-RUN dotnet restore "*.sln"
-
-# Build and publish the release version of the API.
-RUN dotnet publish "src/NurturedChoice.Api/NurturedChoice.Api.csproj" -c Release -o /app/publish --no-restore
+# Copy the rest of the source code
+COPY . .
+RUN dotnet publish "src/NurturedChoice.Api/NurturedChoice.Api.csproj" -c release -o /app/publish --no-restore
 
 # Use the official .NET 8 runtime image for the final, smaller image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
