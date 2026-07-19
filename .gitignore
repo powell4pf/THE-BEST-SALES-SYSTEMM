@@ -1,0 +1,28 @@
+# Build outputs
+bin/
+obj/
+dist/
+out/
+coverage/
+
+# Node
+node_modules/
+vite.svg
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS
+Thumbs.db
+Desktop.ini
+
