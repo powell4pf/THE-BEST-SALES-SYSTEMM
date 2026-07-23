@@ -18,5 +18,8 @@ public sealed record InvoiceDto(
     decimal GrandTotal,
     string? Notes,
     InvoiceStatus Status,
-    IReadOnlyList<InvoiceItemDto> Items);
+    IReadOnlyList<InvoiceItemDto> Items,
+    string? CustomerName = null,
+    string? Branch = null,
+    string? Address = null);
 

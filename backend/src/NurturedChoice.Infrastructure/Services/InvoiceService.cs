@@ -19,7 +19,7 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<PagedResult<InvoiceDto>> GetAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = _db.Invoices.AsNoTracking().Include(x => x.Items).AsQueryable();
+        var query = _db.Invoices.AsNoTracking().Include(x => x.Items).Include(x => x.ParentGroup).Include(x => x.Branch).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -49,7 +49,10 @@ public sealed class InvoiceService : IInvoiceService
                 x.GrandTotal,
                 x.Notes,
                 x.Status,
-                x.Items.Select(i => new InvoiceItemDto(i.Id, i.InvoiceId, i.ProductId, i.ItemName, i.ItemDescription, i.Quantity, i.UnitPrice, i.Discount, i.Tax, i.LineTotal)).ToList()))
+                x.Items.Select(i => new InvoiceItemDto(i.Id, i.InvoiceId, i.ProductId, i.ItemName, i.ItemDescription, i.Quantity, i.UnitPrice, i.Discount, i.Tax, i.LineTotal)).ToList(),
+                x.ParentGroup == null ? null : x.ParentGroup.CompanyName,
+                x.Branch == null ? null : x.Branch.BranchName,
+                x.ParentGroup == null ? null : x.ParentGroup.Address))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<InvoiceDto>(items, total, request.Page, request.PageSize);
@@ -57,7 +60,7 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<InvoiceDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.Invoices.AsNoTracking().Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await _db.Invoices.AsNoTracking().Include(x => x.Items).Include(x => x.ParentGroup).Include(x => x.Branch).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return entity is null
             ? null
             : new InvoiceDto(
@@ -76,7 +79,10 @@ public sealed class InvoiceService : IInvoiceService
                 entity.GrandTotal,
                 entity.Notes,
                 entity.Status,
-                entity.Items.Select(i => new InvoiceItemDto(i.Id, i.InvoiceId, i.ProductId, i.ItemName, i.ItemDescription, i.Quantity, i.UnitPrice, i.Discount, i.Tax, i.LineTotal)).ToList());
+                entity.Items.Select(i => new InvoiceItemDto(i.Id, i.InvoiceId, i.ProductId, i.ItemName, i.ItemDescription, i.Quantity, i.UnitPrice, i.Discount, i.Tax, i.LineTotal)).ToList(),
+                entity.ParentGroup?.CompanyName,
+                entity.Branch?.BranchName,
+                entity.ParentGroup?.Address);
     }
 
     public async Task<Guid> CreateDraftAsync(CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default)
@@ -175,4 +181,3 @@ public sealed class InvoiceService : IInvoiceService
         return $"{prefix}-{nextNumber.ToString().PadLeft(padding, '0')}";
     }
 }
-

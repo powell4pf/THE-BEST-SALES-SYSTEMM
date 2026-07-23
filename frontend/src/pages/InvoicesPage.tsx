@@ -14,6 +14,7 @@ import { invoiceSchema } from '../lib/schemas';
 import type { InvoiceItemRow, InvoiceRow, TableColumn } from '../lib/types';
 import { api } from '../lib/api';
 import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
+import { openLetterheadPrintWindow } from '../lib/print';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -35,14 +36,14 @@ function toFormValues(invoice: InvoiceDetailsDto): InvoiceFormValues {
     invoiceDate: invoice.invoiceDate,
     parentGroupId: invoice.parentGroupId,
     branchId: invoice.branchId,
-    salesperson: invoice.salesperson,
-    paymentTerms: invoice.paymentTerms,
-    dueDate: invoice.dueDate,
-    notes: invoice.notes,
+    salesperson: invoice.salesperson ?? '',
+    paymentTerms: invoice.paymentTerms ?? '',
+    dueDate: invoice.dueDate ?? '',
+    notes: invoice.notes ?? '',
     items: invoice.items.map((item) => ({
       id: item.id,
-      productId: item.productId,
-      productName: item.productName,
+      productId: item.productId ?? '',
+      productName: item.productName ?? item.itemName,
       quantity: String(item.quantity),
       unitPrice: String(item.unitPrice),
       discount: String(item.discount),
@@ -69,7 +70,7 @@ function emptyValues(invoiceNumber: string, customers: ParentGroupSummaryDto[], 
         productId: products[0]?.id ?? '',
         productName: products[0]?.productName ?? '',
         quantity: '1',
-        unitPrice: String(productCatalogSeed[0]?.sellingPrice ?? 0),
+        unitPrice: String(products[0]?.sellingPrice ?? 0),
         discount: '0',
         tax: '0'
       }
@@ -98,6 +99,7 @@ function toRequest(values: InvoiceFormValues): CreateInvoiceRequest {
     notes: values.notes.trim(),
     items: values.items.map((item) => ({
       productId: item.productId,
+      itemName: item.productName.trim() || 'Invoice item',
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitPrice),
       discount: Number(item.discount),
@@ -271,18 +273,11 @@ export function InvoicesPage() {
   async function handlePrint(id: string) {
     const invoice = await queryClient.fetchQuery({ queryKey: ['invoice', id], queryFn: () => api.getInvoice(id) });
 
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) return;
-
     const customer = findCustomer(invoice.parentGroupId);
     const branch = customer?.branches.find((item) => item.id === invoice.branchId);
 
-    const html = `
-      <html>
-        <head>
-          <title>Print Invoice ${invoice.invoiceNumber}</title>
-          <style>
-            body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 32px; color: #111827; background: #fff; }
+    const styles = `
+            body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111827; background: #fff; }
             .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
             .invoice-title { font-size: 28px; font-weight: 700; margin: 0; }
             .invoice-meta { text-align: right; }
@@ -301,9 +296,14 @@ export function InvoicesPage() {
             .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
             .summary-row strong { color: #111827; }
             .notes { margin-top: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 16px; background: #f8fafc; }
-          </style>
-        </head>
-        <body>
+            .invoice-header { margin-bottom: 20px; }
+            .section { margin-bottom: 16px; }
+            th, td { padding: 8px 7px; }
+            td { font-size: 11px; }
+            .details { padding: 12px; }
+            .notes { margin-top: 16px; padding: 12px; }
+          `;
+    const body = `
           <div class="invoice-header">
             <div>
               <p class="label">Invoice</p>
@@ -373,15 +373,8 @@ export function InvoicesPage() {
             <p><strong>Notes</strong></p>
             <p>${invoice.notes || 'No additional notes.'}</p>
           </div>
-        </body>
-      </html>
     `;
-
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    openLetterheadPrintWindow(`Print Invoice ${invoice.invoiceNumber}`, body, styles);
   }
 
   function submit(values: InvoiceFormValues) {

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useMemo } from 'react';
-import { api } from '../../lib/api';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
+import { api } from '../lib/api';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { openLetterheadPrintWindow } from '../lib/print';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -45,7 +46,11 @@ export function AccountsReceivableAgingReport({ onBack }: Props) {
           <h2 className="text-xl font-semibold text-slate-950 dark:text-white">Accounts Receivable Aging</h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">A summary of outstanding customer balances by aging period.</p>
         </div>
-        <Button size="sm" variant="outline" disabled>
+        <Button size="sm" variant="outline" onClick={() => {
+          if (!data) return;
+          const body = `<h1>Accounts Receivable Aging</h1><p>A summary of outstanding customer balances by aging period.</p><table><thead><tr><th>Customer</th><th>Current</th><th>1-30 Days</th><th>31-60 Days</th><th>61-90 Days</th><th>90+ Days</th><th>Total</th></tr></thead><tbody>${data.items.map((item) => `<tr><td>${item.customerName}</td><td>${currency.format(item.current)}</td><td>${currency.format(item.days1To30)}</td><td>${currency.format(item.days31To60)}</td><td>${currency.format(item.days61To90)}</td><td>${currency.format(item.days91Plus)}</td><td>${currency.format(item.total)}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td>${currency.format(totals.current)}</td><td>${currency.format(totals['1-30'])}</td><td>${currency.format(totals['31-60'])}</td><td>${currency.format(totals['61-90'])}</td><td>${currency.format(totals['90+'])}</td><td>${currency.format(totals.total)}</td></tr></tfoot></table>`;
+          openLetterheadPrintWindow('Accounts Receivable Aging', body, 'h1{font-size:24px;margin:0 0 10px}p{color:#6b7280;margin:0 0 20px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:8px 6px;border:1px solid #e5e7eb;text-align:right}th:first-child,td:first-child{text-align:left}th{background:#f8fafc;font-size:10px}tfoot{font-weight:700}');
+        }} disabled={!data}>
           <Printer className="h-4 w-4" />
           Print Report
         </Button>

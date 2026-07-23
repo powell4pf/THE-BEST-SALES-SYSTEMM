@@ -10,7 +10,7 @@
   --panel-strong: #ffffff;
   --text: #0f172a;
   --muted: #64748b;
-  --border: rgba(148, 163, 184, 0.22);
+  --border: rgba(148, 163, 184, 0.2);
   --shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
 }
 
@@ -51,6 +51,7 @@ body {
     sans-serif;
   background: transparent;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 button,
@@ -72,6 +73,41 @@ a {
     radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 28%),
     radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.12), transparent 28%),
     linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.32));
+}
+
+.eyebrow {
+  color: #e35345;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dashboard-hero {
+  background: linear-gradient(120deg, #0b1220 0%, #121d32 54%, #22344b 100%);
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.hero-orb-one {
+  width: 26rem;
+  height: 26rem;
+  right: -8rem;
+  top: -12rem;
+  background: radial-gradient(circle, rgba(227, 83, 69, 0.34), transparent 68%);
+}
+
+.hero-orb-two {
+  width: 22rem;
+  height: 22rem;
+  left: 32%;
+  bottom: -17rem;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 68%);
 }
 
 .sidebar-panel {
@@ -119,4 +155,3 @@ a {
     min-height: auto;
   }
 }
-

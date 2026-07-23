@@ -13,6 +13,7 @@ import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import type { CreateCreditNoteRequest, CreditNoteDetailsDto, InvoiceSummaryDto, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
+import { openLetterheadPrintWindow } from '../lib/print';
 
 const creditNoteItemSchema = z.object({
   id: z.string().optional(),
@@ -223,13 +224,8 @@ export function CreditNotesPage() {
     const creditNote = await queryClient.fetchQuery({ queryKey: ['creditNote', id], queryFn: () => api.getCreditNote(id) });
     const customer = customers.find((c) => c.id === creditNote.customerId);
 
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) return;
-
-    const html = `
-      <html><head><title>Credit Note ${creditNote.creditNoteNumber}</title>
-      <style>body{font-family:Inter,sans-serif;padding:32px;color:#111827}h1{font-size:24px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{padding:12px 10px;border:1px solid #e5e7eb;text-align:left}th{background:#f8fafc;font-size:12px;color:#374151}.text-right{text-align:right}</style>
-      </head><body>
+    const styles = `body{font-family:Inter,sans-serif;padding:0;color:#111827}h1{font-size:24px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{padding:9px 8px;border:1px solid #e5e7eb;text-align:left}th{background:#f8fafc;font-size:12px;color:#374151}.text-right{text-align:right}`;
+    const body = `
       <h1>Credit Note: ${creditNote.creditNoteNumber}</h1>
       <p><strong>Customer:</strong> ${customer?.companyName ?? 'N/A'}</p>
       <p><strong>Date:</strong> ${creditNote.creditNoteDate}</p>
@@ -241,13 +237,8 @@ export function CreditNotesPage() {
         </tbody>
         <tfoot><tr><td colspan="4" class="text-right"><strong>Total</strong></td><td class="text-right"><strong>${currency.format(creditNote.total)}</strong></td></tr></tfoot>
       </table>
-      </body></html>`;
-
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+      `;
+    openLetterheadPrintWindow(`Credit Note ${creditNote.creditNoteNumber}`, body, styles);
   }
 
   return (

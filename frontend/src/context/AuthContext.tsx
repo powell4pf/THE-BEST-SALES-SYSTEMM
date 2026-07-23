@@ -16,6 +16,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   user: AuthUser | null;
   loginWithPassword: (email: string, password: string) => Promise<void>;
+  register: (displayName: string, email: string, password: string, confirmPassword: string, phoneNumber?: string) => Promise<void>;
   loginWithGoogle: (idToken: string, phoneNumber?: string) => Promise<void>;
   logout: () => Promise<void>;
   tokens: AuthTokens | null;
@@ -87,6 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await api.loginPassword({ email, password });
         persist(response);
       },
+      register: async (displayName: string, email: string, password: string, confirmPassword: string, phoneNumber?: string) => {
+        const response = await api.register({ displayName, email, password, confirmPassword, phoneNumber });
+        persist(response);
+      },
       loginWithGoogle: async (idToken: string, phoneNumber?: string) => {
         const response = await api.loginGoogle({ idToken, phoneNumber });
         persist(response);
@@ -118,4 +123,3 @@ export function useAuth() {
 
   return context;
 }
-

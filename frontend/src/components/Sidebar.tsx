@@ -7,6 +7,7 @@ type Props = {
   onNavigate: (path: string) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  className?: string;
 };
 
 const navigation = [
@@ -22,9 +23,9 @@ const navigation = [
   { label: 'Settings', path: '/settings', icon: Settings }
 ];
 
-export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed }: Props) {
+export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed, className }: Props) {
   return (
-    <aside className={cn('sidebar-panel flex h-full flex-col gap-6 p-4', collapsed && 'collapsed')}>
+    <aside className={cn('sidebar-panel flex h-full flex-col gap-6 p-4', collapsed && 'collapsed', className)}>
       <div className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-xl">
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-[0.35em] text-slate-400">Nurtured Choice</div>

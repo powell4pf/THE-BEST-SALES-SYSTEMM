@@ -7,9 +7,10 @@ import { Select } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
 import type { StatementDto } from '../lib/apiTypes';
+import { openLetterheadPrintWindow } from '../lib/print';
 
 const printStyles = `
-  body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 32px; color: #111827; background: #fff; }
+  body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111827; background: #fff; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
   .title { font-size: 28px; font-weight: 700; margin: 0; }
   .customer { font-size: 18px; font-weight: 600; color: #0284c7; margin: 4px 0 0 0; }
@@ -94,11 +95,7 @@ export function StatementsPage() {
                 </p>
               </div>
               <Button size="sm" variant="outline" onClick={() => {
-                const printWindow = window.open('', '_blank', 'width=900,height=700');
-                if (!printWindow) return;
-                const html = `
-                  <html><head><title>Statement for ${statement.customerName}</title><style>${printStyles}</style></head>
-                  <body>
+                const body = `
                     <div class="header">
                       <div>
                         <h1 class="title">Statement of Account</h1>
@@ -120,12 +117,8 @@ export function StatementsPage() {
                         <tr class="total-row"><td colspan="5">Closing Balance</td><td class="text-right">${currency.format(statement.closingBalance)}</td></tr>
                       </tbody>
                     </table>
-                  </body></html>`;
-                printWindow.document.open();
-                printWindow.document.write(html);
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
+                  `;
+                openLetterheadPrintWindow(`Statement for ${statement.customerName}`, body, printStyles);
               }}>
                 <Printer className="h-4 w-4" />
                 Print

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BarChart2, ShoppingBag, FileText } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { AccountsReceivableAgingReport } from '../components/reports/AccountsReceivableAgingReport';
+import { AccountsReceivableAgingReport } from './AccountsReceivableAgingReport';
 
 type ReportKey = 'accountsReceivableAging' | 'salesByCustomer' | 'salesByProduct';
 

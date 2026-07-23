@@ -29,6 +29,18 @@ public sealed class AuthController : ControllerBase
         return result is null ? Unauthorized() : Ok(result);
     }
 
+    [HttpPost("register")]
+    public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Password != request.ConfirmPassword)
+        {
+            return BadRequest(new { title = "Passwords do not match." });
+        }
+
+        var result = await _authService.RegisterAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+        return result is null ? Conflict(new { title = "An account with that email already exists." }) : Ok(result);
+    }
+
     [HttpPost("refresh")]
     public async Task<ActionResult<AuthResponse>> Refresh([FromBody] string refreshToken, CancellationToken cancellationToken)
     {
@@ -43,4 +55,3 @@ public sealed class AuthController : ControllerBase
         return NoContent();
     }
 }
-

@@ -75,7 +75,8 @@ public sealed class AuthService : IAuthService
 
     public async Task<AuthResponse?> SignInWithPasswordAsync(LoginRequest request, string? ipAddress, CancellationToken cancellationToken = default)
     {
-        var user = await _db.AppUsers.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+        var email = request.Email.Trim().ToLowerInvariant();
+        var user = await _db.AppUsers.FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash) || !_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password))
         {
             return null;
@@ -85,6 +86,41 @@ public sealed class AuthService : IAuthService
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
 
+        _db.RefreshTokens.Add(new RefreshToken
+        {
+            AppUserId = user.Id,
+            Token = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddDays(30),
+            CreatedByIp = ipAddress
+        });
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return new AuthResponse(accessToken.Token, refreshToken, accessToken.ExpiresAtUtc, user.Id, user.Email, user.DisplayName, roles);
+    }
+
+    public async Task<AuthResponse?> RegisterAsync(RegisterRequest request, string? ipAddress, CancellationToken cancellationToken = default)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (await _db.AppUsers.AnyAsync(x => x.Email == email, cancellationToken))
+        {
+            return null;
+        }
+
+        var user = new AppUser
+        {
+            Email = email,
+            DisplayName = request.DisplayName.Trim(),
+            PhoneNumber = request.PhoneNumber?.Trim(),
+            PasswordHash = string.Empty,
+            IsEmailVerified = false,
+            Status = RecordStatus.Active
+        };
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+        _db.AppUsers.Add(user);
+
+        var roles = await ResolveRolesAsync(user, "Viewer", cancellationToken);
+        var accessToken = _tokens.CreateAccessToken(user, roles);
+        var refreshToken = _tokens.CreateRefreshToken();
         _db.RefreshTokens.Add(new RefreshToken
         {
             AppUserId = user.Id,

@@ -24,10 +24,10 @@ type CompanyProfileFormValues = z.infer<typeof companyProfileSchema>;
 function toFormValues(profile: CompanyProfileDto): CompanyProfileFormValues {
   return {
     companyName: profile.companyName,
-    email: profile.email,
-    phone: profile.phone,
-    address: profile.address,
-    country: profile.country,
+    email: profile.email ?? '',
+    phone: profile.phone ?? '',
+    address: profile.address ?? '',
+    country: profile.country ?? '',
     currencyCode: profile.currencyCode
   };
 }
@@ -85,6 +85,7 @@ export function SettingsPage() {
             <div className="space-y-6 p-6">
               {profileQuery.isLoading && <p className="text-sm text-slate-500">Loading profile...</p>}
               {profileQuery.error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{(profileQuery.error as Error).message}</div>}
+              {updateProfile.error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{(updateProfile.error as Error).message}</div>}
               {profileQuery.data && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field label="Company Name" required error={errors.companyName?.message} className="md:col-span-2">
@@ -110,7 +111,7 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center justify-end gap-4 rounded-b-3xl border-t border-slate-200/70 bg-slate-50/50 p-6 dark:border-white/10 dark:bg-white/5">
               {updateProfile.isSuccess && !isDirty && <p className="text-sm text-emerald-600">Changes saved successfully.</p>}
-              <Button type="submit" disabled={isSubmitting || updateProfile.isPending || !isDirty}>
+              <Button type="submit" disabled={isSubmitting || updateProfile.isPending || !isDirty || !profileQuery.data}>
                 {isSubmitting || updateProfile.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>

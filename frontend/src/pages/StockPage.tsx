@@ -3,6 +3,7 @@ import { Printer } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { api } from '../lib/api';
+import { openLetterheadPrintWindow } from '../lib/print';
 
 export function StockPage() {
   const stockQuery = useQuery({ queryKey: ['stockDashboard'], queryFn: () => api.getStockDashboard() });
@@ -20,22 +21,14 @@ export function StockPage() {
             size="sm"
             variant="outline"
             onClick={() => {
-              const printWindow = window.open('', '_blank', 'width=900,height=700');
-              if (!printWindow) return;
-              const html = `
-                <html><head><title>Print Stock Report</title>
-                <style>body{font-family:Inter,sans-serif;padding:32px;color:#111827}h1,h2{font-weight:700;margin:0 0 16px}h1{font-size:24px}h2{font-size:18px;margin-top:32px}.grid{display:grid;gap:16px;grid-template-columns:repeat(2,1fr)}.stat{padding:16px;border:1px solid #e5e7eb;border-radius:16px}.label{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280}.value{font-size:20px;font-weight:600;margin-top:8px}.list-item{padding:12px;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:8px}</style>
-                </head><body><h1>Stock Report</h1><div class="grid">${(data?.stats ?? [])
+              const styles = `body{font-family:Inter,sans-serif;padding:0;color:#111827}h1,h2{font-weight:700;margin:0 0 16px}h1{font-size:24px}h2{font-size:18px;margin-top:32px}.grid{display:grid;gap:16px;grid-template-columns:repeat(2,1fr)}.stat{padding:12px;border:1px solid #e5e7eb;border-radius:16px}.label{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280}.value{font-size:20px;font-weight:600;margin-top:8px}.list-item{padding:10px;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:8px}`;
+              const body = `<h1>Stock Report</h1><div class="grid">${(data?.stats ?? [])
                   .map(([label, value]) => `<div class="stat"><div class="label">${label}</div><div class="value">${value}</div></div>`)
                   .join('')}</div>
                 <h2>Recent Movements</h2>
                 <div>${(data?.movements ?? []).map((item) => `<div class="list-item">${item}</div>`).join('')}</div>
-                </body></html>`;
-              printWindow.document.open();
-              printWindow.document.write(html);
-              printWindow.document.close();
-              printWindow.focus();
-              printWindow.print();
+                `;
+              openLetterheadPrintWindow('Print Stock Report', body, styles);
             }}
           >
             <Printer className="h-4 w-4" />

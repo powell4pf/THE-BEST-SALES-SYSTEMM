@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.Common;
 using NurturedChoice.Application.DTOs.Customers;
+using NurturedChoice.Api.Infrastructure;
 
 namespace NurturedChoice.Api.Controllers;
 
 [ApiController]
 [Authorize]
 [Route("api/v1/parent-groups")]
+[Permission("customers.view")]
 public sealed class CustomersController : ControllerBase
 {
     private readonly IParentGroupService _service;
@@ -32,6 +34,7 @@ public sealed class CustomersController : ControllerBase
     }
 
     [HttpPost]
+    [Permission("customers.manage")]
     public async Task<ActionResult<Guid>> Create([FromBody] CreateParentGroupRequest request, CancellationToken cancellationToken)
     {
         var id = await _service.CreateAsync(request, _currentUser.UserId, cancellationToken);
@@ -39,10 +42,12 @@ public sealed class CustomersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Permission("customers.manage")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateParentGroupRequest request, CancellationToken cancellationToken)
         => await _service.UpdateAsync(id, request, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 
     [HttpDelete("{id:guid}")]
+    [Permission("customers.manage")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         => await _service.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 
@@ -53,4 +58,3 @@ public sealed class CustomersController : ControllerBase
         return id is null ? NotFound() : Ok(id);
     }
 }
-

@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.Common;
 using NurturedChoice.Application.DTOs.Billing;
+using NurturedChoice.Api.Infrastructure;
 
 namespace NurturedChoice.Api.Controllers;
 
 [ApiController]
 [Authorize]
 [Route("api/v1/invoices")]
+[Permission("invoices.view")]
 public sealed class InvoicesController : ControllerBase
 {
     private readonly IInvoiceService _service;
@@ -32,6 +34,7 @@ public sealed class InvoicesController : ControllerBase
     }
 
     [HttpPost]
+    [Permission("invoices.manage")]
     public async Task<ActionResult<Guid>> CreateDraft([FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
     {
         var id = await _service.CreateDraftAsync(request, _currentUser.UserId, cancellationToken);
@@ -39,7 +42,7 @@ public sealed class InvoicesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/finalize")]
+    [Permission("invoices.manage")]
     public async Task<IActionResult> Finalize(Guid id, CancellationToken cancellationToken)
         => await _service.FinalizeAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 }
-

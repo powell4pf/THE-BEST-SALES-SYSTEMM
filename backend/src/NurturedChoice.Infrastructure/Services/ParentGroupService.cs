@@ -45,7 +45,9 @@ public sealed class ParentGroupService : IParentGroupService
                 x.Phone,
                 x.CreditLimit,
                 x.Status.ToString(),
-                x.Branches.Count))
+                x.Branches.Count,
+                x.Address,
+                x.Branches.OrderBy(branch => branch.BranchName).Select(branch => new BranchDto(branch.Id, branch.ParentGroupId, branch.BranchName, branch.Address, branch.ContactPerson, branch.Email, branch.Phone)).ToList()))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ParentGroupListItemDto>(items, total, request.Page, request.PageSize);

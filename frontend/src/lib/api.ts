@@ -1,11 +1,17 @@
 import type {
   AuthResponse,
+  AccountsReceivableAgingDto,
+  CreateCreditNoteRequest,
   CreateInvoiceRequest,
   CreateParentGroupRequest,
   CreateProductRequest,
+  DashboardSummaryDto,
   GoogleSignInRequest,
   InvoiceDto,
+  CreditNoteDetailsDto,
+  CreditNoteListItemDto,
   LoginRequest,
+  RegisterRequest,
   ParentGroupDetailsDto,
   ParentGroupListItemDto,
   PagedResult,
@@ -13,6 +19,8 @@ import type {
   UpdateParentGroupRequest,
   UpdateProductRequest
 } from './apiTypes';
+import type { CompanyProfileDto, StockDashboardDto, UpdateCompanyProfileRequest } from './apiTypes';
+import type { CustomerRevenueDto, ProductPerformanceDto, RecentActivityItemDto, SalesTrendPointDto } from './apiTypes';
 import { clearAuthTokens, loadAuthTokens, saveAuthTokens, type AuthTokens } from './session';
 import { isJwtExpired } from './jwt';
 
@@ -68,7 +76,17 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
 async function toError(response: Response): Promise<Error> {
   const body = await response.text();
-  return new Error(body || `Request failed with status ${response.status}`);
+  if (body) {
+    try {
+      const problem = JSON.parse(body) as { title?: string; detail?: string; errors?: Record<string, string[]> };
+      const validation = problem.errors ? Object.values(problem.errors).flat().join(' ') : '';
+      return new Error(problem.detail || problem.title || validation || body);
+    } catch {
+      return new Error(body);
+    }
+  }
+
+  return new Error(`Request failed with status ${response.status}`);
 }
 
 async function refreshTokens(refreshToken: string): Promise<AuthTokens | null> {
@@ -99,6 +117,15 @@ export const api = {
   baseUrl: apiBaseUrl,
   async loginPassword(requestBody: LoginRequest): Promise<AuthResponse> {
     const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+    if (!response.ok) throw await toError(response);
+    return (await response.json()) as AuthResponse;
+  },
+  async register(requestBody: RegisterRequest): Promise<AuthResponse> {
+    const response = await fetch(`${apiBaseUrl}/api/v1/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)
@@ -170,6 +197,30 @@ export const api = {
   async listInvoices(pageSize = 1000): Promise<PagedResult<InvoiceDto>> {
     return request<PagedResult<InvoiceDto>>(`/api/v1/invoices?page=1&pageSize=${pageSize}`);
   },
+  async listCreditNotes(pageSize = 1000): Promise<PagedResult<CreditNoteListItemDto>> {
+    return request<PagedResult<CreditNoteListItemDto>>(`/api/v1/credit-notes?page=1&pageSize=${pageSize}`);
+  },
+  async getCreditNote(id: string): Promise<CreditNoteDetailsDto> {
+    return request<CreditNoteDetailsDto>(`/api/v1/credit-notes/${id}`);
+  },
+  async getNextCreditNoteNumber(): Promise<{ nextNumber: string }> {
+    return request<{ nextNumber: string }>('/api/v1/credit-notes/next-number');
+  },
+  async createCreditNote(requestBody: CreateCreditNoteRequest): Promise<string> {
+    return request<string>('/api/v1/credit-notes', { method: 'POST', body: JSON.stringify(requestBody) });
+  },
+  async updateCreditNote(id: string, requestBody: CreateCreditNoteRequest): Promise<void> {
+    await request<void>(`/api/v1/credit-notes/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
+  async deleteCreditNote(id: string): Promise<void> {
+    await request<void>(`/api/v1/credit-notes/${id}`, { method: 'DELETE' });
+  },
+  async generateStatement(params: { customerId: string; startDate: string; endDate: string }): Promise<import('./apiTypes').StatementDto> {
+    return request<import('./apiTypes').StatementDto>(`/api/v1/statements/generate?customerId=${params.customerId}&startDate=${params.startDate}&endDate=${params.endDate}`);
+  },
+  async getAccountsReceivableAging(): Promise<AccountsReceivableAgingDto> {
+    return request<AccountsReceivableAgingDto>('/api/v1/reports/accounts-receivable-aging');
+  },
   async getInvoice(id: string): Promise<InvoiceDto> {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);
   },
@@ -179,10 +230,55 @@ export const api = {
       body: JSON.stringify(requestBody)
     });
   },
+  async getNextInvoiceNumber(): Promise<{ nextNumber: string }> {
+    const invoices = await this.listInvoices(1000);
+    const max = invoices.items.reduce((highest, invoice) => {
+      const match = invoice.invoiceNumber.match(/(\d+)$/);
+      return Math.max(highest, match ? Number(match[1]) : 0);
+    }, 0);
+    return { nextNumber: `INV-${String(max + 1).padStart(6, '0')}` };
+  },
+  async updateInvoice(id: string, requestBody: CreateInvoiceRequest): Promise<void> {
+    throw new Error('Editing an existing invoice is not enabled by the current API. Create a new draft instead.');
+  },
+  async deleteInvoice(id: string): Promise<void> {
+    throw new Error('Deleting invoices is not enabled by the current API.');
+  },
   async finalizeInvoice(id: string): Promise<void> {
     await request<void>(`/api/v1/invoices/${id}/finalize`, {
       method: 'POST'
     });
+  },
+  async getDashboardSummary(): Promise<DashboardSummaryDto> {
+    return request<DashboardSummaryDto>('/api/v1/dashboard/summary');
+  },
+  async getSalesTrend(range = '6m'): Promise<SalesTrendPointDto[]> {
+    return request<SalesTrendPointDto[]>(`/api/v1/dashboard/sales-trend?range=${range}`);
+  },
+  async getProductPerformance(): Promise<ProductPerformanceDto[]> {
+    return request<ProductPerformanceDto[]>('/api/v1/dashboard/product-performance');
+  },
+  async getCustomerRevenue(): Promise<CustomerRevenueDto[]> {
+    return request<CustomerRevenueDto[]>('/api/v1/dashboard/customer-revenue');
+  },
+  async getRecentActivity(): Promise<RecentActivityItemDto[]> {
+    return request<RecentActivityItemDto[]>('/api/v1/dashboard/recent-activity');
+  },
+  async getCompanyProfile(): Promise<CompanyProfileDto> {
+    return request<CompanyProfileDto>('/api/v1/settings/company-profile');
+  },
+  async updateCompanyProfile(requestBody: UpdateCompanyProfileRequest): Promise<CompanyProfileDto> {
+    return request<CompanyProfileDto>('/api/v1/settings/company-profile', {
+      method: 'PUT',
+      body: JSON.stringify(requestBody)
+    });
+  },
+  async getStockDashboard(): Promise<StockDashboardDto> {
+    const dashboard = await request<{ stats: Array<{ label: string; value: string }>; movements: string[] }>('/api/v1/stock/dashboard');
+    return {
+      stats: dashboard.stats.map((stat) => [stat.label, stat.value]),
+      movements: dashboard.movements
+    };
   },
   isAuthenticated(): boolean {
     const tokens = loadAuthTokens();
@@ -192,4 +288,3 @@ export const api = {
     return loadAuthTokens();
   }
 };
-

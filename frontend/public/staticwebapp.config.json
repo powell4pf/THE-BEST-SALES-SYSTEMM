@@ -1,0 +1,9 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/*.{css,js,png,jpg,jpeg,gif,svg,ico,webp,woff,woff2}"]
+  },
+  "responseOverrides": {
+    "401": { "redirect": "/login", "statusCode": 302 }
+  }
+}

@@ -28,6 +28,12 @@ public static class DependencyInjection
         services.AddScoped<IParentGroupService, ParentGroupService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IInvoiceService, InvoiceService>();
+        services.AddScoped<ICompanyProfileService, CompanyProfileService>();
+        services.AddScoped<IStockService, StockService>();
+        services.AddScoped<ICreditNoteService, CreditNoteService>();
+        services.AddScoped<IStatementService, StatementService>();
+        services.AddScoped<IReportsService, ReportsService>();
+        services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IAuthService, AuthService>();
 
         return services;

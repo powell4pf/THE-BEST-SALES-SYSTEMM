@@ -8,5 +8,7 @@ public sealed record ParentGroupListItemDto(
     string? Phone,
     decimal CreditLimit,
     string Status,
-    int BranchCount);
+    int BranchCount,
+    string? Address,
+    IReadOnlyList<BranchDto> Branches);
 
