@@ -83,9 +83,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 {
-    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-    if (origins.Length == 0) policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-    else policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+    if (origins is null || origins.Length == 0)
+    {
+        // Default for local development: allow any origin but ensure credentials are sent.
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+    }
+    else
+    {
+        policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+    }
 }));
 
 var app = builder.Build();
