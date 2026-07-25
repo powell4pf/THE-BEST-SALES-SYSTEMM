@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users } from 'lucide-react';
+import { BarChart3, Boxes, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Button } from './ui/button';
 
@@ -18,6 +18,7 @@ const navigation = [
   { label: 'Invoices', path: '/invoices', icon: ShoppingCart },
   { label: 'Statements', path: '/statements', icon: FileText },
   { label: 'Credit Notes', path: '/credit-notes', icon: CreditCard },
+  { label: 'Payments', path: '/payments', icon: WalletCards },
   { label: 'Reports', path: '/reports', icon: BarChart3 },
   { label: 'Customer Portal', path: '/portal', icon: ShieldCheck },
   { label: 'Settings', path: '/settings', icon: Settings }

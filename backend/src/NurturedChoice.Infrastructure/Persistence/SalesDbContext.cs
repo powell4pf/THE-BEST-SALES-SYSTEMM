@@ -8,6 +8,8 @@ using NurturedChoice.Domain.Entities.Customers;
 using NurturedChoice.Domain.Entities.Identity;
 using NurturedChoice.Domain.Entities.Inventory;
 using NurturedChoice.Domain.Entities.Settings;
+using NurturedChoice.Domain.Entities;
+using System.Text.Json;
 
 namespace NurturedChoice.Infrastructure.Persistence;
 
@@ -77,6 +79,7 @@ public sealed class SalesDbContext : DbContext, IUnitOfWork
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
 
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,18 +110,37 @@ public sealed class SalesDbContext : DbContext, IUnitOfWork
         ConfigureRefreshTokens(modelBuilder.Entity<RefreshToken>());
         ConfigureCompanyProfiles(modelBuilder.Entity<CompanyProfile>());
         ConfigureSystemSettings(modelBuilder.Entity<SystemSetting>());
+        ConfigureAuditLogs(modelBuilder.Entity<AuditLog>());
     }
 
     public override int SaveChanges()
     {
+        AddAuditLogs();
         ApplyAuditInformation();
         return base.SaveChanges();
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        AddAuditLogs();
         ApplyAuditInformation();
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void AddAuditLogs()
+    {
+        var userId = _currentUser.UserId;
+        var logs = ChangeTracker.Entries<AuditableEntity>()
+            .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(entry => new AuditLog
+            {
+                UserId = userId,
+                Action = entry.State.ToString(),
+                EntityName = entry.Metadata.ClrType.Name,
+                EntityId = entry.Entity.Id,
+                Changes = JsonSerializer.Serialize(new { current = entry.CurrentValues.ToObject(), original = entry.OriginalValues.ToObject() })
+            }).ToList();
+        if (logs.Count > 0) AuditLogs.AddRange(logs);
     }
 
     private void ApplyAuditInformation()
@@ -430,6 +452,17 @@ public sealed class SalesDbContext : DbContext, IUnitOfWork
         builder.Property(x => x.SettingValue).HasMaxLength(4000).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.HasIndex(x => x.SettingKey).IsUnique();
+    }
+
+    private static void ConfigureAuditLogs(EntityTypeBuilder<AuditLog> builder)
+    {
+        builder.ToTable("audit_logs");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Action).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.EntityName).HasMaxLength(150).IsRequired();
+        builder.Property(x => x.Changes).HasColumnType("jsonb").IsRequired();
+        builder.HasIndex(x => new { x.EntityName, x.EntityId, x.CreatedAt });
+        builder.HasIndex(x => x.UserId);
     }
 
     private sealed class NullCurrentUserService : ICurrentUserService

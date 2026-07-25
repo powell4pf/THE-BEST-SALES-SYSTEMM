@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { Field, Modal } from '../components/Modal';
 import { Button } from '../components/ui/button';
@@ -12,6 +12,7 @@ import type { ProductRow, TableColumn } from '../lib/types';
 import { productSchema, type ProductFormValues } from '../lib/schemas';
 import { api } from '../lib/api';
 import type { CreateProductRequest, ProductDto } from '../lib/apiTypes';
+import { downloadCsv } from '../lib/exportCsv';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -203,7 +204,7 @@ export function ProductsPage() {
         columns={columns}
         rows={rows}
         emptyMessage={productsQuery.error ? (productsQuery.error as Error).message : 'No products found.'}
-        actions={<Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button>}
+        actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => downloadCsv('products.csv', (productsQuery.data?.items ?? []).map(p => ({ SKU: p.sku, Product: p.productName, Category: p.category, Stock: p.currentStock, Price: p.sellingPrice, Status: p.status })))}><Download className="h-4 w-4" />Export CSV</Button><Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button></div>}
       />
 
       <Modal

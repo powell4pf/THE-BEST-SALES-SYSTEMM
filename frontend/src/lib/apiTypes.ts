@@ -252,6 +252,13 @@ export type AccountsReceivableAgingItemDto = {
 
 export type AccountsReceivableAgingDto = { items: AccountsReceivableAgingItemDto[] };
 
+export type PaymentDto = { id: string; customerName: string; paymentDate: string; amount: number; method: string; reference: string | null; allocatedAmount: number };
+export type CreatePaymentRequest = { customerId: string; branchId?: string | null; paymentDate: string; amount: number; method: string; reference?: string | null; notes?: string | null; invoiceId?: string | null };
+export type InvoiceNumberSettingsDto = { prefix: string; startingNumber: number; padding: number; resetPolicy: string; manualEditingAllowed: boolean };
+export type UpdateInvoiceNumberSettingsRequest = InvoiceNumberSettingsDto;
+export type SystemSettingDto = { key: string; value: string; description: string | null };
+export type UserRoleDto = { id: string; email: string; displayName: string; roles: string[] };
+
 export type DashboardSummaryDto = {
   totalSales: number;
   todaySales: number;

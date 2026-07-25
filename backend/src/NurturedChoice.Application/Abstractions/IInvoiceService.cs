@@ -12,5 +12,6 @@ public interface IInvoiceService
     Task<Guid> CreateDraftAsync(CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default);
 
     Task<bool> FinalizeAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default);
+    Task<bool> UpdateAsync(Guid id, CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default);
 }
-

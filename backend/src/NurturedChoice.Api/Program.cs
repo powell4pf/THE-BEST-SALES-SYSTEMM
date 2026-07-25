@@ -6,7 +6,20 @@ using NurturedChoice.Api.Infrastructure;
 using NurturedChoice.Infrastructure;
 using NurturedChoice.Infrastructure.Authentication;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args });
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    // Resolve appsettings.json beside the API binaries, not from whatever folder
+    // happened to launch the process. This prevents the frontend's shared
+    // "Failed to fetch" error when the API is started from the repository root.
+    ContentRootPath = AppContext.BaseDirectory
+});
+
+// Keep local/server diagnostics on stdout. The Windows EventLog provider can
+// throw when the process lacks permission to write the .NET Runtime source,
+// masking the actual API/database exception from the client.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 builder.Configuration.Sources.Clear();
 builder.Configuration
@@ -26,7 +39,31 @@ builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection(G
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddSingleton<GoogleTokenService>();
 
+builder.Services.AddHealthChecks();
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+
+if (builder.Environment.IsProduction())
+{
+    if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) ||
+        jwtOptions.SigningKey.Contains("CHANGE_ME", StringComparison.OrdinalIgnoreCase) ||
+        jwtOptions.SigningKey.Length < 32)
+    {
+        throw new InvalidOperationException(
+            "Refusing to start in Production: Jwt:SigningKey is missing, too short, or still set to its " +
+            "development default. Set the Jwt__SigningKey environment variable to a strong, unique secret " +
+            "(32+ random characters) before deploying.");
+    }
+
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString) ||
+        connectionString.Contains("CHANGE_ME", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "Refusing to start in Production: ConnectionStrings:DefaultConnection is missing or still set to " +
+            "its placeholder value. Set the ConnectionStrings__DefaultConnection environment variable before deploying.");
+    }
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -53,10 +90,20 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
 
 var app = builder.Build();
 await app.BootstrapAsync();
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
+{
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GlobalExceptionHandler");
+    var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    logger.LogError(exception, "Unhandled request failure for {Method} {Path}", context.Request.Method, context.Request.Path);
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    context.Response.ContentType = "application/problem+json";
+    await context.Response.WriteAsJsonAsync(new { title = "Unexpected server error", detail = app.Environment.IsDevelopment() ? exception?.Message : "An unexpected error occurred." });
+}));
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/api/v1/health");
 app.MapGet("/", () => Results.Ok(new { service = "NurturedChoice Api", status = "running", version = "v1" }));
 app.Run();

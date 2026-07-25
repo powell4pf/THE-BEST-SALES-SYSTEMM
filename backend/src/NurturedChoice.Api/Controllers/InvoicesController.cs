@@ -45,4 +45,14 @@ public sealed class InvoicesController : ControllerBase
     [Permission("invoices.manage")]
     public async Task<IActionResult> Finalize(Guid id, CancellationToken cancellationToken)
         => await _service.FinalizeAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+
+    [HttpPut("{id:guid}")]
+    [Permission("invoices.manage")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
+        => await _service.UpdateAsync(id, request, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+
+    [HttpDelete("{id:guid}")]
+    [Permission("invoices.manage")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+        => await _service.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 }

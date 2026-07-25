@@ -50,6 +50,7 @@ export function AppShell({ children }: Props) {
       '/invoices': 'Invoices',
       '/statements': 'Statements',
       '/credit-notes': 'Credit Notes',
+      '/payments': 'Payments',
       '/reports': 'Reports',
       '/portal': 'Customer Portal',
       '/settings': 'Settings'

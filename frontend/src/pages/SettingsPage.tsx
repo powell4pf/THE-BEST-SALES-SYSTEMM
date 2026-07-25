@@ -8,7 +8,7 @@ import { Button } from '../components/ui/button';
 import { Field } from '../components/Modal';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
-import type { CompanyProfileDto } from '../lib/apiTypes';
+import type { CompanyProfileDto, InvoiceNumberSettingsDto, SystemSettingDto, UserRoleDto } from '../lib/apiTypes';
 
 const companyProfileSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -34,12 +34,16 @@ function toFormValues(profile: CompanyProfileDto): CompanyProfileFormValues {
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceNumberSettingsDto | null>(null);
   const queryClient = useQueryClient();
 
   const profileQuery = useQuery({
     queryKey: ['companyProfile'],
     queryFn: () => api.getCompanyProfile()
   });
+  const invoiceSettingsQuery = useQuery({ queryKey: ['invoiceNumberSettings'], queryFn: api.getInvoiceNumberSettings, enabled: activeTab === 'numbering' });
+  const systemSettingsQuery = useQuery<SystemSettingDto[]>({ queryKey: ['systemSettings'], queryFn: api.getSystemSettings, enabled: activeTab === 'system' });
+  const usersQuery = useQuery<UserRoleDto[]>({ queryKey: ['users'], queryFn: api.listUsers, enabled: activeTab === 'users' });
 
   const form = useForm<CompanyProfileFormValues>({
     resolver: zodResolver(companyProfileSchema)
@@ -52,6 +56,7 @@ export function SettingsPage() {
       reset(toFormValues(profileQuery.data));
     }
   }, [profileQuery.data, reset]);
+  useEffect(() => { if (invoiceSettingsQuery.data) setInvoiceSettings(invoiceSettingsQuery.data); }, [invoiceSettingsQuery.data]);
 
   const updateProfile = useMutation({
     mutationFn: (values: CompanyProfileFormValues) => api.updateCompanyProfile(values),
@@ -65,14 +70,16 @@ export function SettingsPage() {
     updateProfile.mutate(values);
   };
 
+  const saveInvoiceSettings = useMutation({ mutationFn: () => api.updateInvoiceNumberSettings(invoiceSettings as InvoiceNumberSettingsDto), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoiceNumberSettings'] }) });
+
   return (
     <div className="grid gap-6 xl:grid-cols-[0.5fr_1.5fr]">
       <Card className="p-2">
         <nav className="flex flex-col gap-1">
           <Button variant={activeTab === 'profile' ? 'secondary' : 'ghost'} className="justify-start" onClick={() => setActiveTab('profile')}>Company Profile</Button>
-          <Button variant="ghost" className="justify-start" disabled>Invoice Numbering</Button>
-          <Button variant="ghost" className="justify-start" disabled>System</Button>
-          <Button variant="ghost" className="justify-start" disabled>Users & Roles</Button>
+          <Button variant={activeTab === 'numbering' ? 'secondary' : 'ghost'} className="justify-start" onClick={() => setActiveTab('numbering')}>Invoice Numbering</Button>
+          <Button variant={activeTab === 'system' ? 'secondary' : 'ghost'} className="justify-start" onClick={() => setActiveTab('system')}>System</Button>
+          <Button variant={activeTab === 'users' ? 'secondary' : 'ghost'} className="justify-start" onClick={() => setActiveTab('users')}>Users & Roles</Button>
         </nav>
       </Card>
       <Card>
@@ -117,6 +124,10 @@ export function SettingsPage() {
             </div>
           </form>
         )}
+        {activeTab === 'numbering' && invoiceSettings && <div><div className="p-6"><h2 className="text-xl font-semibold">Invoice Numbering</h2><p className="mt-2 text-sm text-slate-500">Control invoice prefixes and numbering rules.</p></div><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="Prefix"><Input value={invoiceSettings.prefix} onChange={e => setInvoiceSettings({ ...invoiceSettings, prefix: e.target.value })} /></Field><Field label="Starting Number"><Input type="number" value={invoiceSettings.startingNumber} onChange={e => setInvoiceSettings({ ...invoiceSettings, startingNumber: Number(e.target.value) })} /></Field><Field label="Padding"><Input type="number" value={invoiceSettings.padding} onChange={e => setInvoiceSettings({ ...invoiceSettings, padding: Number(e.target.value) })} /></Field><Field label="Reset Policy"><select className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3" value={invoiceSettings.resetPolicy} onChange={e => setInvoiceSettings({ ...invoiceSettings, resetPolicy: e.target.value })}><option>Never</option><option>Yearly</option><option>Monthly</option></select></Field></div><div className="flex justify-end border-t p-6"><Button onClick={() => saveInvoiceSettings.mutate()} disabled={saveInvoiceSettings.isPending}>{saveInvoiceSettings.isPending ? 'Saving...' : 'Save Changes'}</Button></div></div>}
+        {activeTab === 'numbering' && invoiceSettingsQuery.isLoading && <p className="p-6 text-sm text-slate-500">Loading invoice settings...</p>}
+        {activeTab === 'system' && <div className="p-6"><h2 className="text-xl font-semibold">System Settings</h2><div className="mt-6 space-y-3">{(systemSettingsQuery.data ?? []).map(setting => <div key={setting.key} className="rounded-2xl border p-4"><div className="font-medium">{setting.key}</div><div className="text-sm text-slate-500">{setting.value}</div><div className="mt-1 text-xs text-slate-400">{setting.description}</div></div>)}</div></div>}
+        {activeTab === 'users' && <div className="p-6"><h2 className="text-xl font-semibold">Users & Roles</h2><div className="mt-6 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Name</th><th>Email</th><th>Roles</th></tr></thead><tbody>{(usersQuery.data ?? []).map(user => <tr key={user.id} className="border-b"><td className="py-3">{user.displayName}</td><td>{user.email}</td><td>{user.roles.join(', ')}</td></tr>)}</tbody></table>{usersQuery.error && <p className="mt-4 text-sm text-rose-600">{(usersQuery.error as Error).message}</p>}</div></div>}
       </Card>
     </div>
   );

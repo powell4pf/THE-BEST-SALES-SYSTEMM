@@ -143,6 +143,21 @@ public sealed class InvoiceService : IInvoiceService
         return true;
     }
 
+    public async Task<bool> UpdateAsync(Guid id, CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default)
+    {
+        var invoice = await _db.Invoices.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (invoice is null || invoice.Status != InvoiceStatus.Draft) return false;
+        invoice.LpoNumber = request.LpoNumber?.Trim(); invoice.InvoiceDate = request.InvoiceDate; invoice.ParentGroupId = request.ParentGroupId; invoice.BranchId = request.BranchId; invoice.Salesperson = request.Salesperson?.Trim(); invoice.PaymentTerms = request.PaymentTerms?.Trim(); invoice.DueDate = request.DueDate; invoice.Notes = request.Notes?.Trim(); invoice.Items.Clear();
+        foreach (var item in request.Items) invoice.Items.Add(new InvoiceItem { ProductId = item.ProductId, ItemName = item.ItemName.Trim(), ItemDescription = item.ItemDescription?.Trim(), Quantity = item.Quantity, UnitPrice = item.UnitPrice, Discount = item.Discount, Tax = item.Tax, LineTotal = Math.Round(item.Quantity * item.UnitPrice - item.Discount + item.Tax, 2), CreatedBy = userId });
+        invoice.Subtotal = invoice.Items.Sum(x => x.Quantity * x.UnitPrice); invoice.DiscountTotal = invoice.Items.Sum(x => x.Discount); invoice.TaxTotal = invoice.Items.Sum(x => x.Tax); invoice.GrandTotal = invoice.Items.Sum(x => x.LineTotal); invoice.UpdatedBy = userId;
+        await _db.SaveChangesAsync(cancellationToken); return true;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
+    {
+        var invoice = await _db.Invoices.FirstOrDefaultAsync(x => x.Id == id, cancellationToken); if (invoice is null) return false; invoice.Status = InvoiceStatus.Cancelled; invoice.UpdatedBy = userId; await _db.SaveChangesAsync(cancellationToken); return true;
+    }
+
     private async Task<string> EnsureInvoiceNumberAsync(string invoiceNumber, CancellationToken cancellationToken)
     {
         var exists = await _db.Invoices.AnyAsync(x => x.InvoiceNumber == invoiceNumber, cancellationToken);

@@ -35,10 +35,15 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     headers.set('Authorization', `Bearer ${tokens.accessToken}`);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...init,
+      headers
+    });
+  } catch {
+    throw new Error(`Cannot connect to the Sales API at ${apiBaseUrl}. Start the system with start-system.ps1, then refresh this page.`);
+  }
 
   if (response.status === 401 && retry && tokens?.refreshToken) {
     const refreshed = await refreshTokens(tokens.refreshToken);
@@ -60,6 +65,11 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   }
 
   if (!response.ok) {
+    if (response.status === 401 && tokens) {
+      clearAuthTokens();
+      window.location.assign('/login?session=expired');
+      throw new Error('Your session expired. Please sign in again.');
+    }
     throw await toError(response);
   }
 
@@ -221,6 +231,16 @@ export const api = {
   async getAccountsReceivableAging(): Promise<AccountsReceivableAgingDto> {
     return request<AccountsReceivableAgingDto>('/api/v1/reports/accounts-receivable-aging');
   },
+  async listPayments(pageSize = 1000): Promise<PagedResult<import('./apiTypes').PaymentDto>> {
+    return request<PagedResult<import('./apiTypes').PaymentDto>>(`/api/v1/payments?page=1&pageSize=${pageSize}`);
+  },
+  async createPayment(requestBody: import('./apiTypes').CreatePaymentRequest): Promise<string> {
+    return request<string>('/api/v1/payments', { method: 'POST', body: JSON.stringify(requestBody) });
+  },
+  async getInvoiceNumberSettings(): Promise<import('./apiTypes').InvoiceNumberSettingsDto> { return request('/api/v1/settings/invoice-number'); },
+  async updateInvoiceNumberSettings(requestBody: import('./apiTypes').UpdateInvoiceNumberSettingsRequest): Promise<import('./apiTypes').InvoiceNumberSettingsDto> { return request('/api/v1/settings/invoice-number', { method: 'PUT', body: JSON.stringify(requestBody) }); },
+  async getSystemSettings(): Promise<import('./apiTypes').SystemSettingDto[]> { return request('/api/v1/settings/system'); },
+  async listUsers(): Promise<import('./apiTypes').UserRoleDto[]> { return request('/api/v1/users'); },
   async getInvoice(id: string): Promise<InvoiceDto> {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);
   },
@@ -239,10 +259,10 @@ export const api = {
     return { nextNumber: `INV-${String(max + 1).padStart(6, '0')}` };
   },
   async updateInvoice(id: string, requestBody: CreateInvoiceRequest): Promise<void> {
-    throw new Error('Editing an existing invoice is not enabled by the current API. Create a new draft instead.');
+    await request<void>(`/api/v1/invoices/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) });
   },
   async deleteInvoice(id: string): Promise<void> {
-    throw new Error('Deleting invoices is not enabled by the current API.');
+    await request<void>(`/api/v1/invoices/${id}`, { method: 'DELETE' });
   },
   async finalizeInvoice(id: string): Promise<void> {
     await request<void>(`/api/v1/invoices/${id}/finalize`, {
