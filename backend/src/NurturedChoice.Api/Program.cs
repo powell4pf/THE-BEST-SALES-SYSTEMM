@@ -22,10 +22,17 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 builder.Configuration.Sources.Clear();
-builder.Configuration
+var configurationBuilder = builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
-    .AddEnvironmentVariables();
+    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+
+if (builder.Environment.IsDevelopment())
+{
+    configurationBuilder.AddUserSecrets<Program>(optional: true);
+}
+
+configurationBuilder.AddEnvironmentVariables();
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<PermissionFilter>();

@@ -13,6 +13,8 @@ vite.svg
 .env
 .env.*
 !.env.example
+appsettings.Local.json
+backend/src/NurturedChoice.Api/appsettings.Local.json
 
 # IDE
 .vs/
