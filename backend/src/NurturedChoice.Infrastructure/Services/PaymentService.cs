@@ -15,11 +15,33 @@ public sealed class PaymentService : IPaymentService
 
     public async Task<PagedResult<PaymentListItemDto>> GetAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = from payment in _db.Payments.AsNoTracking()
-                    join customer in _db.ParentGroups.AsNoTracking() on payment.ParentGroupId equals customer.Id
-                    select new PaymentListItemDto(payment.Id, customer.CompanyName, payment.PaymentDate, payment.Amount, payment.Method, payment.Reference, payment.Allocations.Where(x => !x.IsDeleted).Sum(x => (decimal?)x.Amount) ?? 0m);
+        var query = _db.Payments.AsNoTracking();
         var total = await query.CountAsync(cancellationToken);
-        var items = await query.OrderByDescending(x => x.PaymentDate).Skip(request.Skip).Take(request.PageSize).ToListAsync(cancellationToken);
+        var rows = await query
+            .OrderByDescending(x => x.PaymentDate)
+            .Skip(request.Skip)
+            .Take(request.PageSize)
+            .Select(x => new
+            {
+                x.Id,
+                x.ParentGroupId,
+                x.PaymentDate,
+                x.Amount,
+                x.Method,
+                x.Reference
+            })
+            .ToListAsync(cancellationToken);
+        var customerIds = rows.Select(x => x.ParentGroupId).Distinct().ToArray();
+        var customerNames = await _db.ParentGroups.AsNoTracking()
+            .Where(x => customerIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.CompanyName, cancellationToken);
+        var paymentIds = rows.Select(x => x.Id).ToArray();
+        var allocations = await _db.PaymentAllocations.AsNoTracking()
+            .Where(x => paymentIds.Contains(x.PaymentId) && !x.IsDeleted)
+            .GroupBy(x => x.PaymentId)
+            .Select(group => new { PaymentId = group.Key, Amount = group.Sum(x => x.Amount) })
+            .ToDictionaryAsync(x => x.PaymentId, x => x.Amount, cancellationToken);
+        var items = rows.Select(x => new PaymentListItemDto(x.Id, x.ParentGroupId, customerNames.GetValueOrDefault(x.ParentGroupId, "Unknown customer"), x.PaymentDate, x.Amount, x.Method, x.Reference, allocations.GetValueOrDefault(x.Id))).ToList();
         return new PagedResult<PaymentListItemDto>(items, total, request.Page, request.PageSize);
     }
 

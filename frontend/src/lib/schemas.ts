@@ -22,7 +22,10 @@ export const customerSchema = z.object({
   email: z.string().trim().email('Enter a valid email'),
   phone: z.string().trim().min(7, 'Enter a valid phone number'),
   address: z.string().trim().min(2, 'Address is required'),
-  kraPin: z.string().trim().min(5, 'KRA PIN is required'),
+  kraPin: z
+    .string()
+    .trim()
+    .refine((value) => value === '0' || value.length >= 5, 'KRA PIN is required'),
   creditLimit: numericString,
   status: z.enum(['Active', 'Credit Hold', 'Inactive']),
   branches: z.array(branchSchema).min(1, 'Add at least one branch')
@@ -71,4 +74,3 @@ export const invoiceSchema = z.object({
 export type CustomerFormValues = z.infer<typeof customerSchema>;
 export type ProductFormValues = z.infer<typeof productSchema>;
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
-

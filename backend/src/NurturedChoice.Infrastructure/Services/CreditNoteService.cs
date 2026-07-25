@@ -19,7 +19,16 @@ public sealed class CreditNoteService : ICreditNoteService
                     join customer in _db.ParentGroups.AsNoTracking() on note.ParentGroupId equals customer.Id
                     join invoice in _db.Invoices.AsNoTracking() on note.InvoiceId equals invoice.Id into invoices
                     from invoice in invoices.DefaultIfEmpty()
-                    select new CreditNoteListItemDto(note.Id, note.CreditNoteNumber, customer.CompanyName, invoice == null ? null : invoice.InvoiceNumber, note.CreditDate, note.TotalAmount, note.Status.ToString());
+                    select new
+                    {
+                        note.Id,
+                        note.CreditNoteNumber,
+                        CustomerName = customer.CompanyName,
+                        InvoiceNumber = invoice == null ? null : invoice.InvoiceNumber,
+                        CreditNoteDate = note.CreditDate,
+                        note.TotalAmount,
+                        Status = note.Status
+                    };
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -28,7 +37,8 @@ public sealed class CreditNoteService : ICreditNoteService
         }
 
         var total = await query.CountAsync(cancellationToken);
-        var items = await query.OrderByDescending(x => x.CreditNoteDate).ThenByDescending(x => x.CreditNoteNumber).Skip(request.Skip).Take(request.PageSize).ToListAsync(cancellationToken);
+        var rows = await query.OrderByDescending(x => x.CreditNoteDate).ThenByDescending(x => x.CreditNoteNumber).Skip(request.Skip).Take(request.PageSize).ToListAsync(cancellationToken);
+        var items = rows.Select(x => new CreditNoteListItemDto(x.Id, x.CreditNoteNumber, x.CustomerName, x.InvoiceNumber, x.CreditNoteDate, x.TotalAmount, x.Status.ToString())).ToList();
         return new PagedResult<CreditNoteListItemDto>(items, total, request.Page, request.PageSize);
     }
 

@@ -37,7 +37,7 @@ public static class ReferenceDataSeeder
         "Viewer"
     ];
 
-    public static async Task SeedReferenceDataAsync(this SalesDbContext db, IPasswordHashService passwordHasher, CancellationToken cancellationToken = default)
+    public static async Task SeedReferenceDataAsync(this SalesDbContext db, IPasswordHashService passwordHasher, bool allowDemoAdmin, string? demoAdminPassword, CancellationToken cancellationToken = default)
     {
         await SeedRolesAsync(db, cancellationToken);
         await SeedPermissionsAsync(db, cancellationToken);
@@ -45,7 +45,10 @@ public static class ReferenceDataSeeder
         await SeedCompanyProfileAsync(db, cancellationToken);
         await SeedInvoiceSettingsAsync(db, cancellationToken);
         await SeedSystemSettingsAsync(db, cancellationToken);
-        await SeedDemoUsersAsync(db, passwordHasher, cancellationToken);
+        if (allowDemoAdmin && !string.IsNullOrWhiteSpace(demoAdminPassword))
+        {
+            await SeedDemoUsersAsync(db, passwordHasher, demoAdminPassword, cancellationToken);
+        }
     }
 
     private static async Task SeedRolesAsync(SalesDbContext db, CancellationToken cancellationToken)
@@ -208,7 +211,7 @@ public static class ReferenceDataSeeder
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task SeedDemoUsersAsync(SalesDbContext db, IPasswordHashService passwordHasher, CancellationToken cancellationToken)
+    private static async Task SeedDemoUsersAsync(SalesDbContext db, IPasswordHashService passwordHasher, string demoAdminPassword, CancellationToken cancellationToken)
     {
         var existing = await db.AppUsers.FirstOrDefaultAsync(x => x.Email == "admin@nurturedchoice.co.ke", cancellationToken);
         if (existing is not null)
@@ -224,7 +227,7 @@ public static class ReferenceDataSeeder
             IsEmailVerified = true,
             Status = RecordStatus.Active
         };
-        user.PasswordHash = passwordHasher.HashPassword(user, "P@ssw0rd!");
+        user.PasswordHash = passwordHasher.HashPassword(user, demoAdminPassword);
 
         db.AppUsers.Add(user);
         await db.SaveChangesAsync(cancellationToken);

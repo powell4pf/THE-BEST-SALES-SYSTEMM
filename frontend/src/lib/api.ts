@@ -24,7 +24,22 @@ import type { CustomerRevenueDto, ProductPerformanceDto, RecentActivityItemDto, 
 import { clearAuthTokens, loadAuthTokens, saveAuthTokens, type AuthTokens } from './session';
 import { isJwtExpired } from './jwt';
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? 'http://localhost:5276';
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const localFrontendHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname) && ['5173', '4173'].includes(window.location.port);
+const configuredLocalFrontendUrl = localFrontendHost && configuredApiBaseUrl
+  ? (() => {
+      try {
+        const configuredUrl = new URL(configuredApiBaseUrl);
+        return ['localhost', '127.0.0.1'].includes(configuredUrl.hostname) && ['5173', '4173'].includes(configuredUrl.port);
+      } catch {
+        return false;
+      }
+    })()
+  : false;
+const defaultApiBaseUrl = localFrontendHost || import.meta.env.DEV ? 'http://localhost:5276' : window.location.origin;
+const apiBaseUrl = (configuredLocalFrontendUrl || (!configuredApiBaseUrl && localFrontendHost)
+  ? 'http://localhost:5276'
+  : configuredApiBaseUrl || defaultApiBaseUrl).replace(/\/$/, '');
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
@@ -79,6 +94,11 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) {
     return undefined as T;
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`The Sales API returned an unexpected ${contentType || 'non-JSON'} response. Check that the API is running at ${apiBaseUrl}.`);
   }
 
   return (await response.json()) as T;

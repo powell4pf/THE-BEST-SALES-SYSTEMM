@@ -21,8 +21,8 @@ vite.svg
 *.user
 *.userosscache
 *.sln.docstates
+*.log
 
 # OS
 Thumbs.db
 Desktop.ini
-

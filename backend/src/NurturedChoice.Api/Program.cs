@@ -62,6 +62,12 @@ if (builder.Environment.IsProduction())
             "Refusing to start in Production: ConnectionStrings:DefaultConnection is missing or still set to " +
             "its placeholder value. Set the ConnectionStrings__DefaultConnection environment variable before deploying.");
     }
+
+    var allowedHosts = builder.Configuration["AllowedHosts"];
+    if (string.IsNullOrWhiteSpace(allowedHosts) || allowedHosts == "*")
+    {
+        throw new InvalidOperationException("Refusing to start in Production: AllowedHosts must name the deployed API host.");
+    }
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -86,8 +92,13 @@ builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
     var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
     if (origins is null || origins.Length == 0)
     {
-        // Default for local development: allow any origin but ensure credentials are sent.
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        if (builder.Environment.IsProduction())
+        {
+            throw new InvalidOperationException("Refusing to start in Production: Cors:AllowedOrigins must contain the deployed frontend origin.");
+        }
+
+        origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "http://127.0.0.1:4173"];
+        policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     }
     else
     {
@@ -104,9 +115,19 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     logger.LogError(exception, "Unhandled request failure for {Method} {Path}", context.Request.Method, context.Request.Path);
     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
     context.Response.ContentType = "application/problem+json";
-    await context.Response.WriteAsJsonAsync(new { title = "Unexpected server error", detail = app.Environment.IsDevelopment() ? exception?.Message : "An unexpected error occurred." });
+    await context.Response.WriteAsJsonAsync(new
+    {
+        type = "https://httpstatuses.com/500",
+        title = "Unexpected server error",
+        status = StatusCodes.Status500InternalServerError,
+        detail = "An unexpected error occurred.",
+        traceId = context.TraceIdentifier
+    });
 }));
-app.UseHttpsRedirection();
+if (builder.Configuration.GetValue("HttpsRedirection:Enabled", false))
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();

@@ -36,8 +36,29 @@ public sealed class DashboardService : IDashboardService
         return Enumerable.Range(0, 6).Select(i => { var date = new DateOnly(start.Year, start.Month, 1).AddMonths(i); var row = rows.FirstOrDefault(x => x.Year == date.Year && x.Month == date.Month); return new SalesTrendPointDto(date.ToString("MMM"), row?.Sales ?? 0); }).ToList();
     }
 
-    public async Task<IReadOnlyList<ProductPerformanceDto>> GetProductPerformanceAsync(CancellationToken ct = default) => await _db.InvoiceItems.AsNoTracking().Join(_db.Invoices.AsNoTracking().Where(i => i.Status != InvoiceStatus.Cancelled && i.Status != InvoiceStatus.Draft), item => item.InvoiceId, invoice => invoice.Id, (item, _) => item).GroupBy(i => i.ItemName).Select(g => new ProductPerformanceDto(g.Key, g.Sum(i => i.Quantity), g.Sum(i => i.LineTotal))).OrderByDescending(x => x.Revenue).Take(10).ToListAsync(ct);
-    public async Task<IReadOnlyList<CustomerRevenueDto>> GetCustomerRevenueAsync(CancellationToken ct = default) => await _db.Invoices.AsNoTracking().Where(i => i.Status != InvoiceStatus.Cancelled && i.Status != InvoiceStatus.Draft).GroupBy(i => i.ParentGroup!.CompanyName).Select(g => new CustomerRevenueDto(g.Key, g.Sum(i => i.GrandTotal))).OrderByDescending(x => x.Revenue).Take(10).ToListAsync(ct);
+    public async Task<IReadOnlyList<ProductPerformanceDto>> GetProductPerformanceAsync(CancellationToken ct = default)
+    {
+        var rows = await _db.InvoiceItems.AsNoTracking()
+            .Join(_db.Invoices.AsNoTracking().Where(i => i.Status != InvoiceStatus.Cancelled && i.Status != InvoiceStatus.Draft), item => item.InvoiceId, invoice => invoice.Id, (item, _) => item)
+            .GroupBy(i => i.ItemName)
+            .Select(g => new { ProductName = g.Key, Quantity = g.Sum(i => i.Quantity), Revenue = g.Sum(i => i.LineTotal) })
+            .OrderByDescending(x => x.Revenue)
+            .Take(10)
+            .ToListAsync(ct);
+        return rows.Select(x => new ProductPerformanceDto(x.ProductName, x.Quantity, x.Revenue)).ToList();
+    }
+
+    public async Task<IReadOnlyList<CustomerRevenueDto>> GetCustomerRevenueAsync(CancellationToken ct = default)
+    {
+        var rows = await _db.Invoices.AsNoTracking()
+            .Where(i => i.Status != InvoiceStatus.Cancelled && i.Status != InvoiceStatus.Draft)
+            .GroupBy(i => i.ParentGroup!.CompanyName)
+            .Select(g => new { CustomerName = g.Key, Revenue = g.Sum(i => i.GrandTotal) })
+            .OrderByDescending(x => x.Revenue)
+            .Take(10)
+            .ToListAsync(ct);
+        return rows.Select(x => new CustomerRevenueDto(x.CustomerName, x.Revenue)).ToList();
+    }
     public async Task<IReadOnlyList<RecentActivityItemDto>> GetRecentActivityAsync(CancellationToken ct = default)
     {
         var invoices = await _db.Invoices.AsNoTracking().OrderByDescending(x => x.CreatedAt).Take(10).Select(x => new RecentActivityItemDto("Invoice", $"Invoice {x.InvoiceNumber} created", x.CreatedAt, x.InvoiceNumber)).ToListAsync(ct);

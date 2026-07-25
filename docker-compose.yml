@@ -16,6 +16,10 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: Host=database;Port=5432;Database=nurtured_choice_sales;Username=postgres;Password=${POSTGRES_PASSWORD}
       ASPNETCORE_URLS: http://+:10000
+      ASPNETCORE_ENVIRONMENT: Production
+      AllowedHosts: ${ALLOWED_HOSTS:?set ALLOWED_HOSTS}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY}
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN}
     depends_on:
       database:
         condition: service_healthy
@@ -24,7 +28,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:10000}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?set VITE_API_BASE_URL}
     depends_on: [api]
     ports: ["8080:80"]
 volumes:
