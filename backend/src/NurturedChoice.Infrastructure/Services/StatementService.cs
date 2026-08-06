@@ -17,24 +17,29 @@ public sealed class StatementService : IStatementService
             ?? throw new InvalidOperationException("Customer was not found.");
 
         var invoices = await _db.Invoices.AsNoTracking()
-            .Where(x => x.ParentGroupId == customerId && x.InvoiceDate >= startDate && x.InvoiceDate <= endDate && x.Status != Domain.Enums.InvoiceStatus.Cancelled && x.Status != Domain.Enums.InvoiceStatus.Draft)
+            .Where(x => x.ParentGroupId == customerId &&
+                        x.InvoiceDate >= startDate &&
+                        x.InvoiceDate <= endDate &&
+                        !x.IsDeleted &&
+                        x.Status != Domain.Enums.InvoiceStatus.Cancelled)
             .OrderBy(x => x.InvoiceDate).ThenBy(x => x.InvoiceNumber)
-            .Select(x => new { x.InvoiceDate, x.InvoiceNumber, x.GrandTotal })
+            .Include(x => x.Branch)
+            .Select(x => new { x.InvoiceDate, x.InvoiceNumber, x.GrandTotal, Branch = x.Branch == null ? "" : x.Branch.BranchName })
             .ToListAsync(cancellationToken);
 
         var payments = await _db.Payments.AsNoTracking()
-            .Where(x => x.ParentGroupId == customerId && x.PaymentDate >= startDate && x.PaymentDate <= endDate)
+            .Where(x => x.ParentGroupId == customerId && !x.IsDeleted && x.PaymentDate >= startDate && x.PaymentDate <= endDate)
             .OrderBy(x => x.PaymentDate)
             .Select(x => new { x.PaymentDate, x.Reference, x.Amount })
             .ToListAsync(cancellationToken);
 
-        var beforeInvoices = await _db.Invoices.AsNoTracking().Where(x => x.ParentGroupId == customerId && x.InvoiceDate < startDate && x.Status != Domain.Enums.InvoiceStatus.Cancelled && x.Status != Domain.Enums.InvoiceStatus.Draft).SumAsync(x => (decimal?)x.GrandTotal, cancellationToken) ?? 0m;
-        var beforePayments = await _db.Payments.AsNoTracking().Where(x => x.ParentGroupId == customerId && x.PaymentDate < startDate).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0m;
+        var beforeInvoices = await _db.Invoices.AsNoTracking().Where(x => x.ParentGroupId == customerId && x.InvoiceDate < startDate && !x.IsDeleted && x.Status != Domain.Enums.InvoiceStatus.Cancelled).SumAsync(x => (decimal?)x.GrandTotal, cancellationToken) ?? 0m;
+        var beforePayments = await _db.Payments.AsNoTracking().Where(x => x.ParentGroupId == customerId && !x.IsDeleted && x.PaymentDate < startDate).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0m;
         var balance = beforeInvoices - beforePayments;
         var transactions = new List<StatementTransactionDto>();
         transactions.Add(new StatementTransactionDto(startDate, "OPENING", "Opening balance", 0, 0, balance));
 
-        foreach (var transaction in invoices.Select(x => (x.InvoiceDate, Document: x.InvoiceNumber, Description: "Invoice", Debit: x.GrandTotal, Credit: 0m))
+        foreach (var transaction in invoices.Select(x => (x.InvoiceDate, Document: x.InvoiceNumber, Description: x.Branch, Debit: x.GrandTotal, Credit: 0m))
             .Concat(payments.Select(x => (x.PaymentDate, Document: x.Reference ?? "PAYMENT", Description: "Payment received", Debit: 0m, Credit: x.Amount)))
             .OrderBy(x => x.Item1))
         {

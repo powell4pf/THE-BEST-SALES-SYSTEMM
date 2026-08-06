@@ -22,4 +22,3 @@ public sealed record InvoiceDto(
     string? CustomerName = null,
     string? Branch = null,
     string? Address = null);
-

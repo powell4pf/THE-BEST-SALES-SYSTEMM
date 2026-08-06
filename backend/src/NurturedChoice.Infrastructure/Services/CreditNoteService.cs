@@ -15,7 +15,7 @@ public sealed class CreditNoteService : ICreditNoteService
 
     public async Task<PagedResult<CreditNoteListItemDto>> GetAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = from note in _db.CreditNotes.AsNoTracking()
+        var query = from note in _db.CreditNotes.AsNoTracking().Where(x => !x.IsDeleted)
                     join customer in _db.ParentGroups.AsNoTracking() on note.ParentGroupId equals customer.Id
                     join invoice in _db.Invoices.AsNoTracking() on note.InvoiceId equals invoice.Id into invoices
                     from invoice in invoices.DefaultIfEmpty()
@@ -44,7 +44,7 @@ public sealed class CreditNoteService : ICreditNoteService
 
     public async Task<CreditNoteDetailsDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var note = await _db.CreditNotes.AsNoTracking().Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var note = await _db.CreditNotes.AsNoTracking().Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (note is null) return null;
         var productNames = await _db.Products.AsNoTracking().Where(x => note.Items.Select(i => i.ProductId).Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.ProductName, cancellationToken);
         return new CreditNoteDetailsDto(note.Id, note.CreditNoteNumber, note.ParentGroupId, note.InvoiceId, note.CreditDate, note.Reason ?? string.Empty, note.TotalAmount, note.Status.ToString(), note.Items.Select(x => new CreditNoteItemDto(x.Id, x.ProductId, productNames.GetValueOrDefault(x.ProductId ?? Guid.Empty, x.ItemName), x.Quantity, x.UnitPrice, x.LineTotal, note.Reason)).ToList());
@@ -74,7 +74,7 @@ public sealed class CreditNoteService : ICreditNoteService
 
     public async Task<bool> UpdateAsync(Guid id, CreateCreditNoteRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var note = await _db.CreditNotes.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var note = await _db.CreditNotes.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (note is null) return false;
         note.CreditNoteNumber = request.CreditNoteNumber.Trim(); note.ParentGroupId = request.CustomerId; note.InvoiceId = request.InvoiceId; note.CreditDate = request.CreditNoteDate; note.Reason = request.Subject.Trim(); note.UpdatedBy = userId;
         _db.CreditNoteItems.RemoveRange(note.Items);
@@ -86,7 +86,7 @@ public sealed class CreditNoteService : ICreditNoteService
 
     public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var note = await _db.CreditNotes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken); if (note is null) return false;
+        var note = await _db.CreditNotes.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken); if (note is null) return false;
         note.IsDeleted = true; note.DeletedBy = userId; note.DeletedAt = DateTime.UtcNow; await _db.SaveChangesAsync(cancellationToken); return true;
     }
 }

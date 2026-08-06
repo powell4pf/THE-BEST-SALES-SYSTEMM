@@ -12,7 +12,7 @@ if not exist "dist\index.html" (
   )
 )
 
-npm.cmd run preview -- --host 127.0.0.1 --port 5173 --strictPort > "%ROOT%frontend.log" 2>&1
+node "%ROOT%frontend\scripts\serve-spa.mjs" > "%ROOT%frontend.log" 2>&1
 if errorlevel 1 (
   echo The frontend stopped. See frontend.log for details.
   pause

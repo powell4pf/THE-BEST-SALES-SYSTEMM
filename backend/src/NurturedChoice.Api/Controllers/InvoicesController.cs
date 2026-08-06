@@ -1,58 +1,56 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NurturedChoice.Api.Infrastructure;
 using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.Common;
 using NurturedChoice.Application.DTOs.Billing;
-using NurturedChoice.Api.Infrastructure;
 
 namespace NurturedChoice.Api.Controllers;
 
 [ApiController]
 [Authorize]
 [Route("api/v1/invoices")]
-[Permission("invoices.view")]
 public sealed class InvoicesController : ControllerBase
 {
-    private readonly IInvoiceService _service;
+    private readonly IInvoiceService _invoiceService;
     private readonly ICurrentUserService _currentUser;
 
-    public InvoicesController(IInvoiceService service, ICurrentUserService currentUser)
+    public InvoicesController(IInvoiceService invoiceService, ICurrentUserService currentUser)
     {
-        _service = service;
+        _invoiceService = invoiceService;
         _currentUser = currentUser;
     }
 
     [HttpGet]
-    public Task<PagedResult<InvoiceDto>> Get([FromQuery] PagedRequest request, CancellationToken cancellationToken)
-        => _service.GetAsync(request, cancellationToken);
+    [Permission("invoices.view")]
+    public Task<PagedResult<InvoiceDto>> ListInvoices([FromQuery] PagedRequest request, CancellationToken cancellationToken)
+        => _invoiceService.GetAsync(request, cancellationToken);
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<InvoiceDto>> GetById(Guid id, CancellationToken cancellationToken)
-    {
-        var result = await _service.GetByIdAsync(id, cancellationToken);
-        return result is null ? NotFound() : Ok(result);
-    }
+    [Permission("invoices.view")]
+    public async Task<IActionResult> GetInvoice(Guid id, CancellationToken cancellationToken)
+        => (await _invoiceService.GetByIdAsync(id, cancellationToken)) is { } invoice ? Ok(invoice) : NotFound();
 
     [HttpPost]
     [Permission("invoices.manage")]
-    public async Task<ActionResult<Guid>> CreateDraft([FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
     {
-        var id = await _service.CreateDraftAsync(request, _currentUser.UserId, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id }, id);
+        var invoiceId = await _invoiceService.CreateDraftAsync(request, _currentUser.UserId, cancellationToken);
+        return CreatedAtAction(nameof(GetInvoice), new { id = invoiceId }, new { id = invoiceId });
     }
-
-    [HttpPost("{id:guid}/finalize")]
-    [Permission("invoices.manage")]
-    public async Task<IActionResult> Finalize(Guid id, CancellationToken cancellationToken)
-        => await _service.FinalizeAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 
     [HttpPut("{id:guid}")]
     [Permission("invoices.manage")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
-        => await _service.UpdateAsync(id, request, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+    public async Task<IActionResult> UpdateInvoice(Guid id, [FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
+        => await _invoiceService.UpdateAsync(id, request, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 
     [HttpDelete("{id:guid}")]
     [Permission("invoices.manage")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
-        => await _service.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+    public async Task<IActionResult> DeleteInvoice(Guid id, CancellationToken cancellationToken)
+        => await _invoiceService.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+
+    [HttpPost("{id:guid}/finalize")]
+    [Permission("invoices.manage")]
+    public async Task<IActionResult> FinalizeInvoice(Guid id, CancellationToken cancellationToken)
+        => await _invoiceService.FinalizeAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 }

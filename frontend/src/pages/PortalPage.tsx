@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
 import type { StatementDto } from '../lib/apiTypes';
-import { openLetterheadPrintWindow } from '../lib/print';
+import { openLetterheadPrintWindow, openStatementPrintWindow } from '../lib/print';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 const dateFormatter = new Intl.DateTimeFormat('en-KE', { dateStyle: 'medium' });
@@ -16,6 +16,9 @@ function escapeHtml(value: string) {
 }
 
 function printStatement(statement: StatementDto) {
+  openStatementPrintWindow(statement);
+  return;
+
   const rows = statement.transactions.map((transaction) => `
     <tr>
       <td>${escapeHtml(dateFormatter.format(new Date(transaction.date)))}</td>

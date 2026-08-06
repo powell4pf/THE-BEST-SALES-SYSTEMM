@@ -14,7 +14,9 @@ export function AppShell({ children }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const auth = useAuth();
-  const [theme, setTheme] = useState<ThemeMode>(() => (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  // The workspace always opens in light mode. Users can still switch modes
+  // with the top-bar toggle during the current session.
+  const [theme, setTheme] = useState<ThemeMode>('light');
   const [collapsed, setCollapsed] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -51,6 +53,7 @@ export function AppShell({ children }: Props) {
       '/statements': 'Statements',
       '/credit-notes': 'Credit Notes',
       '/payments': 'Payments',
+      '/collections': 'Collections',
       '/reports': 'Reports',
       '/portal': 'Customer Portal',
       '/settings': 'Settings'

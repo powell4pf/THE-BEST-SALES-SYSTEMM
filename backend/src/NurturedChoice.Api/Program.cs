@@ -120,14 +120,17 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GlobalExceptionHandler");
     var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
     logger.LogError(exception, "Unhandled request failure for {Method} {Path}", context.Request.Method, context.Request.Path);
-    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    var isClientInputError = exception is InvalidOperationException;
+    context.Response.StatusCode = isClientInputError
+        ? StatusCodes.Status409Conflict
+        : StatusCodes.Status500InternalServerError;
     context.Response.ContentType = "application/problem+json";
     await context.Response.WriteAsJsonAsync(new
     {
         type = "https://httpstatuses.com/500",
-        title = "Unexpected server error",
-        status = StatusCodes.Status500InternalServerError,
-        detail = "An unexpected error occurred.",
+        title = isClientInputError ? "Invoice cannot be created" : "Unexpected server error",
+        status = context.Response.StatusCode,
+        detail = isClientInputError ? exception!.Message : "An unexpected error occurred.",
         traceId = context.TraceIdentifier
     });
 }));

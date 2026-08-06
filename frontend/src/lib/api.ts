@@ -251,11 +251,20 @@ export const api = {
   async getAccountsReceivableAging(): Promise<AccountsReceivableAgingDto> {
     return request<AccountsReceivableAgingDto>('/api/v1/reports/accounts-receivable-aging');
   },
+  async getCollectionsOverview(): Promise<import('./apiTypes').CollectionsOverviewDto> {
+    return request<import('./apiTypes').CollectionsOverviewDto>('/api/v1/collections/overview');
+  },
+  async updateCollectionFollowUp(customerId: string, requestBody: import('./apiTypes').UpdateCollectionFollowUpRequest): Promise<void> {
+    await request<void>(`/api/v1/collections/${customerId}/follow-up`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
   async listPayments(pageSize = 1000): Promise<PagedResult<import('./apiTypes').PaymentDto>> {
     return request<PagedResult<import('./apiTypes').PaymentDto>>(`/api/v1/payments?page=1&pageSize=${pageSize}`);
   },
   async createPayment(requestBody: import('./apiTypes').CreatePaymentRequest): Promise<string> {
     return request<string>('/api/v1/payments', { method: 'POST', body: JSON.stringify(requestBody) });
+  },
+  async deletePayment(id: string): Promise<void> {
+    await request<void>(`/api/v1/payments/${id}`, { method: 'DELETE' });
   },
   async getInvoiceNumberSettings(): Promise<import('./apiTypes').InvoiceNumberSettingsDto> { return request('/api/v1/settings/invoice-number'); },
   async updateInvoiceNumberSettings(requestBody: import('./apiTypes').UpdateInvoiceNumberSettingsRequest): Promise<import('./apiTypes').InvoiceNumberSettingsDto> { return request('/api/v1/settings/invoice-number', { method: 'PUT', body: JSON.stringify(requestBody) }); },

@@ -19,7 +19,7 @@ public sealed class ProductService : IProductService
 
     public async Task<PagedResult<ProductDto>> GetAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
-        var query = _db.Products.AsNoTracking().AsQueryable();
+        var query = _db.Products.AsNoTracking().Where(x => !x.IsDeleted).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -53,7 +53,7 @@ public sealed class ProductService : IProductService
 
     public async Task<ProductDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await _db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         return entity is null
             ? null
             : new ProductDto(entity.Id, entity.Sku, entity.Barcode, entity.ProductName, entity.Category, entity.Description, entity.BuyingPrice, entity.SellingPrice, entity.Unit, entity.CurrentStock, entity.MinimumStock, entity.Status.ToString(), entity.ImageUrl);
@@ -85,7 +85,7 @@ public sealed class ProductService : IProductService
 
     public async Task<bool> UpdateAsync(Guid id, UpdateProductRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.Products.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await _db.Products.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (entity is null) return false;
 
         entity.Sku = request.Sku.Trim();
@@ -107,7 +107,7 @@ public sealed class ProductService : IProductService
 
     public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.Products.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await _db.Products.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (entity is null) return false;
 
         entity.IsDeleted = true;
@@ -117,4 +117,3 @@ public sealed class ProductService : IProductService
         return true;
     }
 }
-

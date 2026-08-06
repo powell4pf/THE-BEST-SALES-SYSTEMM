@@ -12,6 +12,7 @@ import { ReportsPage } from '../pages/ReportsPage';
 import { PortalPage } from '../pages/PortalPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { PaymentsPage } from '../pages/PaymentsPage';
+import { CollectionsPage } from '../pages/CollectionsPage';
 import { LoginPage } from '../pages/LoginPage';
 
 export function AppRoutes() {
@@ -33,6 +34,7 @@ export function AppRoutes() {
         <Route path="/statements" element={<StatementsPage />} />
         <Route path="/credit-notes" element={<CreditNotesPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/portal" element={<PortalPage />} />
         <Route path="/settings" element={<SettingsPage />} />

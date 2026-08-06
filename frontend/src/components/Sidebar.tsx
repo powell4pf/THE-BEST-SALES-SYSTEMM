@@ -1,6 +1,8 @@
-import { BarChart3, Boxes, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards } from 'lucide-react';
+import { BarChart3, Boxes, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Button } from './ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
 
 type Props = {
   currentPath: string;
@@ -19,12 +21,17 @@ const navigation = [
   { label: 'Statements', path: '/statements', icon: FileText },
   { label: 'Credit Notes', path: '/credit-notes', icon: CreditCard },
   { label: 'Payments', path: '/payments', icon: WalletCards },
+  { label: 'Collections', path: '/collections', icon: HandCoins },
   { label: 'Reports', path: '/reports', icon: BarChart3 },
   { label: 'Customer Portal', path: '/portal', icon: ShieldCheck },
   { label: 'Settings', path: '/settings', icon: Settings }
 ];
 
 export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed, className }: Props) {
+  const summaryQuery = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 15000, staleTime: 0 });
+  const todaySales = summaryQuery.data?.todaySales ?? 0;
+  const money = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 });
+
   return (
     <aside className={cn('sidebar-panel flex h-full flex-col gap-6 p-4', collapsed && 'collapsed', className)}>
       <div className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-xl">
@@ -59,8 +66,8 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
 
       <div className="rounded-3xl border border-white/10 bg-white/6 p-4 text-sm text-slate-300 backdrop-blur-xl">
         <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Today</div>
-        <div className="mt-2 text-xl font-semibold text-white">KES 1.28M</div>
-        <p className="mt-1 leading-relaxed">You are 8.1% above yesterday's pace.</p>
+        <div className="mt-2 text-xl font-semibold text-white">{summaryQuery.isLoading ? 'Loading...' : money.format(todaySales)}</div>
+        <p className="mt-1 leading-relaxed">Sales recorded today, updated live.</p>
       </div>
     </aside>
   );

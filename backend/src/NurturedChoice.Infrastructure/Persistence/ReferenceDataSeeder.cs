@@ -102,7 +102,10 @@ public static class ReferenceDataSeeder
             }
         }
 
-        foreach (var permissionKey in new[] { "customers.view", "products.view", "stock.view", "invoices.view", "statements.view", "creditnotes.view", "reports.view" })
+        // The application exposes invoice drafting to the standard signed-in
+        // workspace user, so keep the visible Generate Invoice action usable
+        // for existing Viewer accounts as well as Sales and Accounts users.
+        foreach (var permissionKey in new[] { "customers.view", "products.view", "stock.view", "invoices.view", "invoices.manage", "statements.view", "creditnotes.view", "reports.view" })
         {
             if (viewerId != Guid.Empty && permissionMap.TryGetValue(permissionKey, out var permissionId))
             {
@@ -131,6 +134,19 @@ public static class ReferenceDataSeeder
             if (warehouseId != Guid.Empty && permissionMap.TryGetValue(permissionKey, out var permissionId))
             {
                 await AddRolePermissionAsync(db, warehouseId, permissionId, cancellationToken);
+            }
+        }
+
+        // This installation is intended for a trusted internal team. Every
+        // account must be able to operate the complete sales workspace, so
+        // apply the full permission catalogue to every seeded role. Keeping
+        // this in the idempotent seeder upgrades existing accounts as well as
+        // provisioning new deployments.
+        foreach (var roleId in roleMap.Values.Where(id => id != Guid.Empty).Distinct())
+        {
+            foreach (var permissionId in permissionMap.Values)
+            {
+                await AddRolePermissionAsync(db, roleId, permissionId, cancellationToken);
             }
         }
 

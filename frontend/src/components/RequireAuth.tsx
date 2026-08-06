@@ -5,7 +5,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const location = useLocation();
 
-  if (!auth.ready) {
+  if (auth.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
         <div className="rounded-3xl border border-white/10 bg-white/6 px-6 py-4 text-sm text-slate-300">Loading session...</div>
@@ -19,4 +19,3 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   return children;
 }
-

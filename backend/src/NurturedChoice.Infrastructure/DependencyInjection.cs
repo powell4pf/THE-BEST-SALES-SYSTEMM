@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ICreditNoteService, CreditNoteService>();
         services.AddScoped<IStatementService, StatementService>();
         services.AddScoped<IReportsService, ReportsService>();
+        services.AddScoped<ICollectionsService, CollectionsService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<ISettingsService, SettingsService>();

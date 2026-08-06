@@ -17,11 +17,11 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const [summary, trend, products, customers, activity] = useQueries({
     queries: [
-      { queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary },
+      { queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 15000, staleTime: 0 },
       { queryKey: ['dashboard', 'trend'], queryFn: () => api.getSalesTrend('6m') },
       { queryKey: ['dashboard', 'products'], queryFn: api.getProductPerformance },
       { queryKey: ['dashboard', 'customers'], queryFn: api.getCustomerRevenue },
-      { queryKey: ['dashboard', 'activity'], queryFn: api.getRecentActivity }
+      { queryKey: ['dashboard', 'activity'], queryFn: api.getRecentActivity, refetchInterval: 15000, staleTime: 0 }
     ]
   });
 

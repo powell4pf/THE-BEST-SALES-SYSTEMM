@@ -12,7 +12,7 @@ import { Field, Modal } from '../components/Modal';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import type { CreateCreditNoteRequest, CreditNoteDetailsDto, InvoiceSummaryDto, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
+import type { CreateCreditNoteRequest, CreditNoteDetailsDto, CreditNoteListItemDto, InvoiceSummaryDto, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
 import { openLetterheadPrintWindow } from '../lib/print';
 
 const creditNoteItemSchema = z.object({
@@ -113,7 +113,22 @@ export function CreditNotesPage() {
 
   const deleteCreditNote = useMutation({
     mutationFn: (id: string) => api.deleteCreditNote(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creditNotes'] })
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['creditNotes'] });
+      const previous = queryClient.getQueryData<{ items: CreditNoteListItemDto[]; totalCount: number }>(['creditNotes']);
+      if (previous) {
+        queryClient.setQueryData(['creditNotes'], {
+          ...previous,
+          items: previous.items.filter((creditNote) => creditNote.id !== id),
+          totalCount: Math.max(0, previous.totalCount - 1)
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['creditNotes'], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['creditNotes'] })
   });
 
   const rows = useMemo(() => (creditNotesQuery.data?.items ?? []).map((cn) => ({ ...cn, totalFormatted: `KES ${currency.format(cn.total)}` })), [creditNotesQuery.data]);

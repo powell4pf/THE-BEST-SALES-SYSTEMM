@@ -2,6 +2,7 @@ namespace NurturedChoice.Domain.Common;
 
 public abstract class AuditableEntity : Entity
 {
+    public new Guid Id { get; set; } = Guid.NewGuid();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Guid? CreatedBy { get; set; }
@@ -16,4 +17,3 @@ public abstract class AuditableEntity : Entity
 
     public Guid? DeletedBy { get; set; }
 }
-

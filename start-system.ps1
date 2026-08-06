@@ -52,20 +52,7 @@ function Ensure-FrontendBuild {
 
 $envLoaded = & $envLoader -Root $root
 if (-not $envLoaded) {
-  Write-Host 'First-time setup is required.' -ForegroundColor Yellow
-  if ([Environment]::UserInteractive) {
-    Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-      '-NoProfile',
-      '-ExecutionPolicy', 'Bypass',
-      '-File', "`"$setupScript`""
-    ) -Wait
-  } else {
-    & $setupScript
-  }
-  $envLoaded = & $envLoader -Root $root
-  if (-not $envLoaded) {
-    throw 'Local setup did not complete. Run setup-local.cmd and try again.'
-  }
+  throw "Local settings are missing. Run '$root\setup-local.cmd' once, then run start-system.cmd again. Auto-start will not open a hidden database setup prompt."
 }
 
 if (-not (Test-Port 5276)) {
@@ -73,8 +60,7 @@ if (-not (Test-Port 5276)) {
     Write-Host 'Building the API...' -ForegroundColor Yellow
     dotnet build $apiProject | Out-Host
   }
-  Push-Location $apiDir
-  try { & cmd.exe /c start "" /b cmd.exe /c call "$apiRunner" | Out-Null } finally { Pop-Location }
+  Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/c', "call `"$apiRunner`"") -WorkingDirectory $apiDir -WindowStyle Hidden
   if (-not (Wait-Port 5276)) {
     throw 'The API did not start on http://localhost:5276. Check backend\api.log for details.'
   }

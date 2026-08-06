@@ -1,125 +1,70 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from '../lib/api';
-import type { AuthResponse } from '../lib/apiTypes';
-import { clearAuthTokens, loadAuthTokens, saveAuthTokens, type AuthTokens } from '../lib/session';
+import { clearAuthTokens, loadAuthTokens, saveAuthTokens } from '../lib/session';
 import { decodeJwt, isJwtExpired } from '../lib/jwt';
+import type { AuthResponse } from '../lib/apiTypes';
 
-type AuthUser = {
-  userId: string;
-  email: string;
-  displayName: string;
-  roles: string[];
-};
-
-type AuthContextValue = {
-  ready: boolean;
-  isAuthenticated: boolean;
+type AuthUser = { id: string; displayName: string; email: string; roles: string[] };
+type AuthState = {
   user: AuthUser | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   loginWithPassword: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (googleToken: string) => Promise<void>;
   register: (displayName: string, email: string, password: string, confirmPassword: string, phoneNumber?: string) => Promise<void>;
-  loginWithGoogle: (idToken: string, phoneNumber?: string) => Promise<void>;
   logout: () => Promise<void>;
-  tokens: AuthTokens | null;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthState | undefined>(undefined);
+const USER_KEY = 'nurtured-choice.user';
 
-function toAuthUser(response: AuthResponse): AuthUser {
-  return {
-    userId: response.userId,
-    email: response.email,
-    displayName: response.displayName,
-    roles: response.roles
-  };
+function saveAuthResponse(response: AuthResponse) {
+  saveAuthTokens({ accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAtUtc: response.expiresAtUtc });
+  const user = { id: response.userId, displayName: response.displayName, email: response.email, roles: response.roles ?? [] };
+  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+  return user;
 }
 
-function userFromToken(tokens: AuthTokens | null): AuthUser | null {
-  if (!tokens?.accessToken) {
-    return null;
-  }
-
-  const payload = decodeJwt(tokens.accessToken);
-  if (!payload) {
-    return null;
-  }
-
-  const roles = Array.isArray(payload.role) ? payload.role : payload.role ? [payload.role] : [];
-
-  return {
-    userId: payload.sub ?? '',
-    email: payload.email ?? '',
-    displayName: payload.name ?? payload.email ?? 'User',
-    roles
-  };
+function loadStoredUser(): AuthUser | null {
+  try { const raw = window.localStorage.getItem(USER_KEY); return raw ? JSON.parse(raw) as AuthUser : null; } catch { return null; }
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [tokens, setTokens] = useState<AuthTokens | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [ready, setReady] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const stored = loadAuthTokens();
-    if (stored) {
-      setTokens(stored);
-      setUser(userFromToken(stored));
-    }
-    setReady(true);
+  const clearSession = useCallback(() => {
+    clearAuthTokens();
+    window.localStorage.removeItem(USER_KEY);
+    window.localStorage.removeItem('authToken');
+    window.localStorage.removeItem('authUser');
+    setUser(null); setToken(null);
   }, []);
 
-  const persist = (response: AuthResponse) => {
-    const nextTokens = {
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      expiresAtUtc: response.expiresAtUtc
-    };
-    saveAuthTokens(nextTokens);
-    setTokens(nextTokens);
-    setUser(toAuthUser(response));
-  };
+  useEffect(() => {
+    const tokens = loadAuthTokens();
+    if (tokens?.accessToken && !isJwtExpired(tokens.accessToken)) {
+      setToken(tokens.accessToken);
+      setUser(loadStoredUser() ?? (() => { const payload = decodeJwt(tokens.accessToken); return payload?.sub && payload.email ? { id: payload.sub, email: payload.email, displayName: payload.name ?? payload.email, roles: [] } : null; })());
+    } else {
+      clearSession();
+    }
+    setIsLoading(false);
+  }, [clearSession]);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      ready,
-      isAuthenticated: Boolean(tokens?.refreshToken || (tokens?.accessToken && !isJwtExpired(tokens.accessToken))),
-      user,
-      tokens,
-      loginWithPassword: async (email: string, password: string) => {
-        const response = await api.loginPassword({ email, password });
-        persist(response);
-      },
-      register: async (displayName: string, email: string, password: string, confirmPassword: string, phoneNumber?: string) => {
-        const response = await api.register({ displayName, email, password, confirmPassword, phoneNumber });
-        persist(response);
-      },
-      loginWithGoogle: async (idToken: string, phoneNumber?: string) => {
-        const response = await api.loginGoogle({ idToken, phoneNumber });
-        persist(response);
-      },
-      logout: async () => {
-        if (tokens?.refreshToken) {
-          try {
-            await api.logout(tokens.refreshToken);
-          } catch {
-            // Ignore logout failures and clear local session anyway.
-          }
-        }
-        clearAuthTokens();
-        setTokens(null);
-        setUser(null);
-      }
-    }),
-    [ready, tokens, user]
-  );
+  const completeLogin = useCallback((response: AuthResponse) => { const nextUser = saveAuthResponse(response); setToken(response.accessToken); setUser(nextUser); }, []);
+  const loginWithPassword = useCallback(async (email: string, password: string) => completeLogin(await api.loginPassword({ email, password })), [completeLogin]);
+  const loginWithGoogle = useCallback(async (googleToken: string) => completeLogin(await api.loginGoogle({ idToken: googleToken })), [completeLogin]);
+  const register = useCallback(async (displayName: string, email: string, password: string, confirmPassword: string, phoneNumber?: string) => completeLogin(await api.register({ displayName, email, password, confirmPassword, phoneNumber })), [completeLogin]);
+  const logout = useCallback(async () => { const tokens = loadAuthTokens(); try { if (tokens?.refreshToken) await api.logout(tokens.refreshToken); } finally { clearSession(); } }, [clearSession]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, token, isAuthenticated: Boolean(token), isLoading, loginWithPassword, loginWithGoogle, register, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

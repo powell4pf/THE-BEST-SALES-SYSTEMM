@@ -11,9 +11,9 @@ import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import type { InvoiceFormValues } from '../lib/schemas';
 import { invoiceSchema } from '../lib/schemas';
-import type { InvoiceItemRow, InvoiceRow, TableColumn } from '../lib/types';
+import type { TableColumn } from '../lib/types';
 import { api } from '../lib/api';
-import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
+import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto, PagedResult } from '../lib/apiTypes';
 import { openLetterheadPrintWindow } from '../lib/print';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
@@ -46,9 +46,7 @@ function toFormValues(invoice: InvoiceDetailsDto): InvoiceFormValues {
       productName: item.productName ?? item.itemName,
       quantity: String(item.quantity),
       unitPrice: String(item.unitPrice),
-      discount: String(item.discount),
-      tax: String(item.tax)
-    }))
+    })),
   };
 }
 
@@ -62,7 +60,7 @@ function emptyValues(invoiceNumber: string, customers: ParentGroupSummaryDto[], 
     branchId: '',
     salesperson: '',
     paymentTerms: '7 Days',
-    dueDate: addDays(today(), 7),
+    dueDate: addDays(today(), 90),
     notes: '',
     items: [
       {
@@ -71,19 +69,15 @@ function emptyValues(invoiceNumber: string, customers: ParentGroupSummaryDto[], 
         productName: products[0]?.productName ?? '',
         quantity: '1',
         unitPrice: String(products[0]?.sellingPrice ?? 0),
-        discount: '0',
-        tax: '0'
       }
     ]
   };
 }
 
-function computeLineTotal(item: { quantity: string; unitPrice: string; discount: string; tax: string }) {
+function computeLineTotal(item: { quantity: string; unitPrice: string }) {
   const quantity = Number(item.quantity || 0);
   const unitPrice = Number(item.unitPrice || 0);
-  const discount = Number(item.discount || 0);
-  const tax = Number(item.tax || 0);
-  return Math.max(quantity * unitPrice - discount + tax, 0);
+  return Math.max(quantity * unitPrice, 0);
 }
 
 function toRequest(values: InvoiceFormValues): CreateInvoiceRequest {
@@ -102,9 +96,7 @@ function toRequest(values: InvoiceFormValues): CreateInvoiceRequest {
       itemName: item.productName.trim() || 'Invoice item',
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitPrice),
-      discount: Number(item.discount),
-      tax: Number(item.tax)
-    }))
+    })),
   };
 }
 
@@ -170,18 +162,16 @@ export function InvoicesPage() {
     }
   }, [branchOptions, getValues, modalOpen, setValue]);
 
-  const rows: (InvoiceDto & { grandTotal: number })[] = useMemo(
-    () =>
-      (invoicesQuery.data?.items ?? []).map((invoice) => {
-        return {
-          ...invoice,
-          total: `KES ${currency.format(invoice.grandTotal)}`
-        };
-      }),
-    [invoicesQuery.data]
+  type InvoiceTableRow = InvoiceDto & { total: string };
+  const rows: InvoiceTableRow[] = useMemo(
+    () => (invoicesQuery.data?.items ?? []).map((invoice) => ({
+      ...invoice,
+      total: `KES ${currency.format(invoice.grandTotal)}`
+    })),
+    [invoicesQuery.data, currency]
   );
 
-  const columns: TableColumn<(typeof rows)[number]>[] = [
+  const columns: TableColumn<InvoiceTableRow>[] = [
     { key: 'invoiceNumber', label: 'Invoice Number' },
     { key: 'customerName', label: 'Customer' },
     { key: 'branch', label: 'Branch' },
@@ -230,6 +220,7 @@ export function InvoicesPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       if (editingId) {
         await queryClient.invalidateQueries({ queryKey: ['invoice', editingId] });
       }
@@ -242,15 +233,27 @@ export function InvoicesPage() {
 
   const deleteInvoice = useMutation({
     mutationFn: (id: string) => api.deleteInvoice(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['invoices'] });
+      const previous = queryClient.getQueryData<PagedResult<InvoiceDto>>(['invoices']);
+      if (previous) {
+        queryClient.setQueryData<PagedResult<InvoiceDto>>(['invoices'], {
+          ...previous,
+          items: previous.items.filter((invoice) => invoice.id !== id),
+          totalCount: Math.max(0, previous.totalCount - 1)
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(['invoices'], context.previous);
+    },
+    onSettled: async () => { await queryClient.invalidateQueries({ queryKey: ['invoices'] }); await queryClient.invalidateQueries({ queryKey: ['dashboard'] }); }
   });
 
   const totals = useMemo(() => {
     const subtotal = watchedItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0);
-    const discountTotal = watchedItems.reduce((sum, item) => sum + Number(item.discount || 0), 0);
-    const taxTotal = watchedItems.reduce((sum, item) => sum + Number(item.tax || 0), 0);
-    const grandTotal = watchedItems.reduce((sum, item) => sum + computeLineTotal(item), 0);
-    return { subtotal, discountTotal, taxTotal, grandTotal };
+    return { subtotal, grandTotal: watchedItems.reduce((sum, item) => sum + computeLineTotal(item), 0) };
   }, [watchedItems]);
 
   function openCreate() {
@@ -266,7 +269,8 @@ export function InvoicesPage() {
   function handleDelete(id: string) {
     const invoice = invoicesQuery.data?.items.find((item) => item.id === id);
     if (!invoice) return;
-    if (!window.confirm(`Delete ${invoice.invoiceNumber}?`)) return;
+    // Add a confirmation dialog to prevent accidental deletes.
+    if (!window.confirm(`Are you sure you want to delete invoice ${invoice.invoiceNumber}? This action cannot be undone.`)) return;
     deleteInvoice.mutate(id);
   }
 
@@ -275,6 +279,7 @@ export function InvoicesPage() {
 
     const customer = findCustomer(invoice.parentGroupId);
     const branch = customer?.branches.find((item) => item.id === invoice.branchId);
+    const invoiceTotal = invoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
     const styles = `
             body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111827; background: #fff; }
@@ -300,6 +305,7 @@ export function InvoicesPage() {
             .section { margin-bottom: 16px; }
             th, td { padding: 8px 7px; }
             td { font-size: 11px; }
+            .product-name { font-weight: 700; color: #111827; }
             .details { padding: 12px; }
             .notes { margin-top: 16px; padding: 12px; }
           `;
@@ -340,22 +346,18 @@ export function InvoicesPage() {
               <thead>
                 <tr>
                   <th>Product</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Unit Price</th>
-                  <th class="text-right">Discount</th>
-                  <th class="text-right">Tax</th>
-                  <th class="text-right">Total</th>
+                  <th style="text-align: right; width: 15%;">Qty</th>
+                  <th style="text-align: right; width: 20%;">Unit Price</th>
+                  <th style="text-align: right; width: 20%;">Total</th>
                 </tr>
               </thead>
               <tbody>
                 ${invoice.items.map((item) => `
                   <tr>
-                    <td>${item.productName}</td>
-                    <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">KES ${currency.format(item.unitPrice)}</td>
-                    <td class="text-right">KES ${currency.format(item.discount)}</td>
-                    <td class="text-right">KES ${currency.format(item.tax)}</td>
-                    <td class="text-right">KES ${currency.format(item.lineTotal)}</td>
+                    <td class="product-name">${item.itemName}</td>
+                    <td style="text-align: right;">${item.quantity}</td>
+                    <td style="text-align: right;">KES ${currency.format(item.unitPrice)}</td>
+                    <td style="text-align: right;">KES ${currency.format(item.quantity * item.unitPrice)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -363,10 +365,7 @@ export function InvoicesPage() {
           </div>
 
           <div class="summary">
-            <div class="summary-row"><span>Subtotal</span><strong>KES ${currency.format(invoice.subtotal)}</strong></div>
-            <div class="summary-row"><span>Discount</span><strong>KES ${currency.format(invoice.discountTotal)}</strong></div>
-            <div class="summary-row"><span>Tax</span><strong>KES ${currency.format(invoice.taxTotal)}</strong></div>
-            <div class="summary-row"><span>Total</span><strong>KES ${currency.format(invoice.grandTotal)}</strong></div>
+            <div class="summary-row"><span>Total</span><strong>KES ${currency.format(invoiceTotal)}</strong></div>
           </div>
 
           <div class="notes">
@@ -413,6 +412,7 @@ export function InvoicesPage() {
         }
       >
         {saveInvoice.error ? <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">{(saveInvoice.error as Error).message}</div> : null}
+        {Object.keys(errors).length > 0 ? <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">Please correct the highlighted invoice fields before creating the draft.</div> : null}
         <form className="space-y-8" onSubmit={handleSubmit(submit)}>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Invoice Number" required error={errors.invoiceNumber?.message}>
@@ -462,7 +462,7 @@ export function InvoicesPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ id: undefined, productId: '', productName: '', quantity: '1', unitPrice: '0', discount: '0', tax: '0' })}
+        onClick={() => append({ id: undefined, productId: '', productName: '', quantity: '1', unitPrice: '0' })}
               >
                 <Plus className="h-4 w-4" />
                 Add Item
@@ -476,7 +476,7 @@ export function InvoicesPage() {
                     <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Line {index + 1}</div>
                     <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)} disabled={fields.length === 1}>Remove</Button>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <Field label="Product" required error={errors.items?.[index]?.productId?.message}>
                       <Select
                         {...form.register(`items.${index}.productId` as const)}
@@ -500,14 +500,8 @@ export function InvoicesPage() {
                     <Field label="Unit Price" required error={errors.items?.[index]?.unitPrice?.message}>
                       <Input {...form.register(`items.${index}.unitPrice` as const)} inputMode="decimal" />
                     </Field>
-                    <Field label="Discount" required error={errors.items?.[index]?.discount?.message}>
-                      <Input {...form.register(`items.${index}.discount` as const)} inputMode="decimal" />
-                    </Field>
-                    <Field label="Tax" required error={errors.items?.[index]?.tax?.message}>
-                      <Input {...form.register(`items.${index}.tax` as const)} inputMode="decimal" />
-                    </Field>
                     <Field label="Line Total">
-                      <Input readOnly value={`KES ${currency.format(computeLineTotal(watchedItems[index] ?? { quantity: '0', unitPrice: '0', discount: '0', tax: '0' }))}`} />
+                      <Input readOnly value={`KES ${currency.format(computeLineTotal(watchedItems[index] ?? { quantity: '0', unitPrice: '0' }))}`} />
                     </Field>
                   </div>
                 </div>
@@ -515,18 +509,10 @@ export function InvoicesPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 rounded-3xl border border-slate-200/70 bg-slate-50/70 p-5 dark:border-white/10 dark:bg-white/5 md:grid-cols-4">
+          <div className="grid gap-4 rounded-3xl border border-slate-200/70 bg-slate-50/70 p-5 dark:border-white/10 dark:bg-white/5 md:grid-cols-2">
             <div>
               <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Subtotal</div>
               <div className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">KES {currency.format(totals.subtotal)}</div>
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Discount</div>
-              <div className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">KES {currency.format(totals.discountTotal)}</div>
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Tax</div>
-              <div className="mt-2 text-xl font-semibold text-slate-950 dark:text-white">KES {currency.format(totals.taxTotal)}</div>
             </div>
             <div>
               <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Grand Total</div>

@@ -132,8 +132,6 @@ export type InvoiceItemRequest = {
   itemDescription?: string | null;
   quantity: number;
   unitPrice: number;
-  discount: number;
-  tax: number;
 };
 
 export type CreateInvoiceRequest = {
@@ -251,6 +249,11 @@ export type AccountsReceivableAgingItemDto = {
 };
 
 export type AccountsReceivableAgingDto = { items: AccountsReceivableAgingItemDto[] };
+
+export type CollectionInvoiceDto = { invoiceId: string; invoiceNumber: string; branch: string | null; invoiceDate: string; dueDate: string | null; total: number; paid: number; outstanding: number; daysOverdue: number };
+export type CollectionCustomerDto = { customerId: string; customerName: string; contactPerson: string | null; email: string | null; phone: string | null; creditLimit: number; outstandingBalance: number; currentBalance: number; overdueBalance: number; oldestDaysOverdue: number; riskStatus: string; followUpStatus: string; nextFollowUpDate: string | null; lastContactedAt: string | null; lastContactMethod: string | null; notes: string | null; invoices: CollectionInvoiceDto[] };
+export type CollectionsOverviewDto = { asOfDate: string; totalOutstanding: number; totalOverdue: number; dueToday: number; dueNext7Days: number; customersWithBalance: number; customersOverdue: number; customers: CollectionCustomerDto[] };
+export type UpdateCollectionFollowUpRequest = { status: string; nextFollowUpDate: string | null; contactMethod: string | null; notes: string | null };
 
 export type PaymentDto = { id: string; parentGroupId: string; customerName: string; paymentDate: string; amount: number; method: string; reference: string | null; allocatedAmount: number };
 export type CreatePaymentRequest = { customerId: string; branchId?: string | null; paymentDate: string; amount: number; method: string; reference?: string | null; notes?: string | null; invoiceId?: string | null };

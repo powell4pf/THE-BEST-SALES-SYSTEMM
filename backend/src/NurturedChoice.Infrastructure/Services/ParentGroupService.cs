@@ -21,7 +21,8 @@ public sealed class ParentGroupService : IParentGroupService
     {
         var query = _db.ParentGroups
             .AsNoTracking()
-            .Include(x => x.Branches)
+            .Include(x => x.Branches.Where(branch => !branch.IsDeleted))
+            .Where(x => !x.IsDeleted)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -45,9 +46,9 @@ public sealed class ParentGroupService : IParentGroupService
                 x.Phone,
                 x.CreditLimit,
                 x.Status.ToString(),
-                x.Branches.Count,
+                x.Branches.Count(branch => !branch.IsDeleted),
                 x.Address,
-                x.Branches.OrderBy(branch => branch.BranchName).Select(branch => new BranchDto(branch.Id, branch.ParentGroupId, branch.BranchName, branch.Address, branch.ContactPerson, branch.Email, branch.Phone)).ToList()))
+                x.Branches.Where(branch => !branch.IsDeleted).OrderBy(branch => branch.BranchName).Select(branch => new BranchDto(branch.Id, branch.ParentGroupId, branch.BranchName, branch.Address, branch.ContactPerson, branch.Email, branch.Phone)).ToList()))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ParentGroupListItemDto>(items, total, request.Page, request.PageSize);
@@ -57,8 +58,8 @@ public sealed class ParentGroupService : IParentGroupService
     {
         var entity = await _db.ParentGroups
             .AsNoTracking()
-            .Include(x => x.Branches)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            .Include(x => x.Branches.Where(branch => !branch.IsDeleted))
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
 
         return entity is null
             ? null
@@ -120,7 +121,7 @@ public sealed class ParentGroupService : IParentGroupService
 
     public async Task<bool> UpdateAsync(Guid id, UpdateParentGroupRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.ParentGroups.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await _db.ParentGroups.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (entity is null) return false;
 
         entity.CompanyName = request.CompanyName.Trim();
@@ -134,7 +135,7 @@ public sealed class ParentGroupService : IParentGroupService
 
         if (request.Branches is not null)
         {
-            var existingBranches = await _db.Branches.Where(x => x.ParentGroupId == id).ToListAsync(cancellationToken);
+            var existingBranches = await _db.Branches.Where(x => x.ParentGroupId == id && !x.IsDeleted).ToListAsync(cancellationToken);
             var incomingIds = new HashSet<Guid>();
 
             foreach (var branchRequest in request.Branches)
@@ -184,7 +185,7 @@ public sealed class ParentGroupService : IParentGroupService
 
     public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.ParentGroups.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await _db.ParentGroups.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (entity is null) return false;
 
         entity.IsDeleted = true;
@@ -197,7 +198,7 @@ public sealed class ParentGroupService : IParentGroupService
 
     public async Task<Guid?> AddBranchAsync(Guid parentGroupId, CreateBranchRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var exists = await _db.ParentGroups.AnyAsync(x => x.Id == parentGroupId, cancellationToken);
+        var exists = await _db.ParentGroups.AnyAsync(x => x.Id == parentGroupId && !x.IsDeleted, cancellationToken);
         if (!exists) return null;
 
         var branch = new Branch
@@ -218,7 +219,7 @@ public sealed class ParentGroupService : IParentGroupService
 
     public async Task<bool> UpdateBranchAsync(Guid branchId, UpdateBranchRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.Branches.FirstOrDefaultAsync(x => x.Id == branchId, cancellationToken);
+        var entity = await _db.Branches.FirstOrDefaultAsync(x => x.Id == branchId && !x.IsDeleted, cancellationToken);
         if (entity is null) return false;
 
         entity.BranchName = request.BranchName.Trim();
@@ -233,7 +234,7 @@ public sealed class ParentGroupService : IParentGroupService
 
     public async Task<bool> DeleteBranchAsync(Guid branchId, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var entity = await _db.Branches.FirstOrDefaultAsync(x => x.Id == branchId, cancellationToken);
+        var entity = await _db.Branches.FirstOrDefaultAsync(x => x.Id == branchId && !x.IsDeleted, cancellationToken);
         if (entity is null) return false;
 
         entity.IsDeleted = true;

@@ -14,4 +14,5 @@ public sealed class PaymentsController : ControllerBase
     public PaymentsController(IPaymentService service, ICurrentUserService currentUser) { _service = service; _currentUser = currentUser; }
     [HttpGet] public Task<PagedResult<PaymentListItemDto>> Get([FromQuery] PagedRequest request, CancellationToken cancellationToken) => _service.GetAsync(request, cancellationToken);
     [HttpPost, Permission("invoices.manage")] public async Task<ActionResult<Guid>> Create(CreatePaymentRequest request, CancellationToken cancellationToken) => Ok(await _service.CreateAsync(request, _currentUser.UserId, cancellationToken));
+    [HttpDelete("{id:guid}"), Permission("invoices.manage")] public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken) => await _service.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 }

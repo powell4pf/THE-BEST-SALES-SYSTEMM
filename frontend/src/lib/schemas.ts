@@ -52,9 +52,7 @@ export const invoiceItemSchema = z.object({
   productId: z.string().trim().min(1, 'Select a product'),
   productName: z.string().trim().min(2, 'Product is required'),
   quantity: numericString,
-  unitPrice: numericString,
-  discount: numericString,
-  tax: numericString
+  unitPrice: numericString
 });
 
 export const invoiceSchema = z.object({

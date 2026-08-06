@@ -7,21 +7,7 @@ import { Select } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
 import type { StatementDto } from '../lib/apiTypes';
-import { openLetterheadPrintWindow } from '../lib/print';
-
-const printStyles = `
-  body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111827; background: #fff; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
-  .title { font-size: 28px; font-weight: 700; margin: 0; }
-  .customer { font-size: 18px; font-weight: 600; color: #0284c7; margin: 4px 0 0 0; }
-  .period { font-size: 14px; color: #6b7280; }
-  table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-  th, td { padding: 12px 10px; border: 1px solid #e5e7eb; }
-  th { background: #f8fafc; font-size: 12px; text-align: left; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; }
-  td { font-size: 13px; color: #111827; }
-  .text-right { text-align: right; }
-  .balance-row { font-weight: 600; }
-  .total-row { font-weight: 700; border-top: 2px solid #374151; }`;
+import { openStatementPrintWindow } from '../lib/print';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -32,6 +18,11 @@ function today() {
 function firstDayOfMonth() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function statementDate(value: string) {
+  const [year, month, day] = value.split('-');
+  return `${Number(day)}/${Number(month)}/${year}`;
 }
 
 export function StatementsPage() {
@@ -47,6 +38,8 @@ export function StatementsPage() {
   });
 
   const statement = generateStatement.data;
+  const invoiceRows = statement?.transactions.filter((transaction) => transaction.document !== 'OPENING' && transaction.debit > 0) ?? [];
+  const invoiceTotal = invoiceRows.reduce((sum, transaction) => sum + transaction.debit, 0);
 
   const handleGenerate = () => generateStatement.mutate({ customerId, startDate, endDate });
 
@@ -91,35 +84,10 @@ export function StatementsPage() {
                 <h3 className="text-2xl font-bold text-slate-950 dark:text-white">Statement of Account</h3>
                 <p className="mt-1 text-lg font-semibold text-sky-600 dark:text-sky-400">{statement.customerName}</p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  For the period: {statement.startDate} to {statement.endDate}
+                  For the period: {statementDate(statement.startDate)} to {statementDate(statement.endDate)}
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => {
-                const body = `
-                    <div class="header">
-                      <div>
-                        <h1 class="title">Statement of Account</h1>
-                        <p class="customer">${statement.customerName}</p>
-                        <p class="period">For the period: ${statement.startDate} to ${statement.endDate}</p>
-                      </div>
-                    </div>
-                    <table>
-                      <thead><tr><th>Date</th><th>Document</th><th>Description</th><th class="text-right">Debit</th><th class="text-right">Credit</th><th class="text-right">Balance</th></tr></thead>
-                      <tbody>
-                        <tr class="balance-row"><td colspan="5">Opening Balance</td><td class="text-right">${currency.format(statement.openingBalance)}</td></tr>
-                        ${statement.transactions.map((tx) => `
-                          <tr>
-                            <td>${tx.date}</td><td>${tx.document}</td><td>${tx.description}</td>
-                            <td class="text-right">${tx.debit > 0 ? currency.format(tx.debit) : '-'}</td>
-                            <td class="text-right">${tx.credit > 0 ? currency.format(tx.credit) : '-'}</td>
-                            <td class="text-right">${currency.format(tx.balance)}</td>
-                          </tr>`).join('')}
-                        <tr class="total-row"><td colspan="5">Closing Balance</td><td class="text-right">${currency.format(statement.closingBalance)}</td></tr>
-                      </tbody>
-                    </table>
-                  `;
-                openLetterheadPrintWindow(`Statement for ${statement.customerName}`, body, printStyles);
-              }}>
+              <Button size="sm" variant="outline" onClick={() => openStatementPrintWindow(statement)}>
                 <Printer className="h-4 w-4" />
                 Print
               </Button>
@@ -130,31 +98,23 @@ export function StatementsPage() {
                 <thead className="border-b-2 border-slate-300 dark:border-slate-700">
                   <tr className="text-left text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     <th className="py-3 pr-3">Date</th>
-                    <th className="py-3 pr-3">Document</th>
-                    <th className="py-3 pr-3">Description</th>
-                    <th className="py-3 pr-3 text-right">Debit</th>
-                    <th className="py-3 pr-3 text-right">Credit</th>
-                    <th className="py-3 pl-3 text-right">Balance</th>
+                    <th className="py-3 pr-3">Invoice No</th>
+                    <th className="py-3 pr-3">Branch</th>
+                    <th className="py-3 pl-3 text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="font-semibold">
-                    <td colSpan={5} className="py-3 pr-3">Opening Balance</td>
-                    <td className="py-3 pl-3 text-right">{currency.format(statement.openingBalance)}</td>
-                  </tr>
-                  {statement.transactions.map((tx, index) => (
+                  {invoiceRows.map((tx, index) => (
                     <tr key={index} className="border-t border-slate-200/70 dark:border-white/10">
-                      <td className="py-3 pr-3">{tx.date}</td>
-                      <td className="py-3 pr-3">{tx.document}</td>
-                      <td className="py-3 pr-3">{tx.description}</td>
-                      <td className="py-3 pr-3 text-right">{tx.debit > 0 ? currency.format(tx.debit) : '-'}</td>
-                      <td className="py-3 pr-3 text-right">{tx.credit > 0 ? currency.format(tx.credit) : '-'}</td>
-                      <td className="py-3 pl-3 text-right">{currency.format(tx.balance)}</td>
+                      <td className="py-3 pr-3">{statementDate(tx.date)}</td>
+                      <td className="py-3 pr-3 font-semibold text-slate-950 dark:text-white">{tx.document}</td>
+                      <td className="py-3 pr-3">{tx.description || '-'}</td>
+                      <td className="py-3 pl-3 text-right font-semibold">{currency.format(tx.debit)}</td>
                     </tr>
                   ))}
                   <tr className="border-t-2 border-slate-300 font-extrabold dark:border-slate-700">
-                    <td colSpan={5} className="py-3 pr-3">Closing Balance</td>
-                    <td className="py-3 pl-3 text-right">{currency.format(statement.closingBalance)}</td>
+                    <td colSpan={3} className="py-3 pr-3">Total</td>
+                    <td className="py-3 pl-3 text-right">{currency.format(invoiceTotal)}</td>
                   </tr>
                 </tbody>
               </table>
