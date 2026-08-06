@@ -1,6 +1,6 @@
 create table if not exists audit_logs (
     "Id" uuid primary key,
-    "UserId" uuid null references app_users("Id") on delete set null,
+    "UserId" uuid null references app_users(id) on delete set null,
     "Action" varchar(30) not null,
     "EntityName" varchar(150) not null,
     "EntityId" uuid not null,
