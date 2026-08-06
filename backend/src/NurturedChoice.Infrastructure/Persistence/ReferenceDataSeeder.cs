@@ -156,7 +156,13 @@ public static class ReferenceDataSeeder
     private static async Task AddRolePermissionAsync(SalesDbContext db, Guid roleId, Guid permissionId, CancellationToken cancellationToken)
     {
         var exists = await db.AppRolePermissions.AnyAsync(x => x.AppRoleId == roleId && x.AppPermissionId == permissionId, cancellationToken);
-        if (!exists)
+        var alreadyQueued = db.ChangeTracker
+            .Entries<AppRolePermission>()
+            .Any(entry => entry.State != EntityState.Deleted &&
+                          entry.Entity.AppRoleId == roleId &&
+                          entry.Entity.AppPermissionId == permissionId);
+
+        if (!exists && !alreadyQueued)
         {
             db.AppRolePermissions.Add(new AppRolePermission { AppRoleId = roleId, AppPermissionId = permissionId });
         }
