@@ -10,17 +10,22 @@ namespace NurturedChoice.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool useProductionSchema)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
+        services.AddSingleton(new DatabaseSchemaOptions(useProductionSchema));
+
         services.AddDbContext<SalesDbContext>(options =>
+        {
             options.UseNpgsql(connectionString, npgsql =>
             {
                 npgsql.EnableRetryOnFailure();
                 npgsql.MigrationsHistoryTable("__ef_migrations", "public");
-            }));
+            });
+
+        });
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<SalesDbContext>());
         services.AddScoped<IClock, SystemClock>();

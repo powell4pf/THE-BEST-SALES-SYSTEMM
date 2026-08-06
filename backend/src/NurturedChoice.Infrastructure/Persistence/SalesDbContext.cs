@@ -11,7 +11,12 @@ namespace NurturedChoice.Infrastructure.Persistence;
 
 public class SalesDbContext : DbContext, IUnitOfWork
 {
-    public SalesDbContext(DbContextOptions<SalesDbContext> options) : base(options) { }
+    private readonly bool _useSnakeCase;
+
+    public SalesDbContext(DbContextOptions<SalesDbContext> options, DatabaseSchemaOptions? schemaOptions = null) : base(options)
+    {
+        _useSnakeCase = schemaOptions?.UseSnakeCase == true;
+    }
 
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
@@ -89,5 +94,36 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<CollectionFollowUp>().Property(x => x.IsDeleted).HasColumnName("is_deleted");
         modelBuilder.Entity<CollectionFollowUp>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
         modelBuilder.Entity<CollectionFollowUp>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
+
+        if (_useSnakeCase)
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    property.SetColumnName(ToSnakeCase(property.Name));
+                }
+            }
+        }
+    }
+
+    private static string ToSnakeCase(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var result = new System.Text.StringBuilder(value.Length + 8);
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+            if (char.IsUpper(character))
+            {
+                var previousIsLower = index > 0 && char.IsLower(value[index - 1]);
+                var previousIsUpper = index > 0 && char.IsUpper(value[index - 1]);
+                var nextIsLower = index + 1 < value.Length && char.IsLower(value[index + 1]);
+                if (index > 0 && (previousIsLower || (previousIsUpper && nextIsLower))) result.Append('_');
+                result.Append(char.ToLowerInvariant(character));
+            }
+            else result.Append(character);
+        }
+        return result.ToString();
     }
 }
