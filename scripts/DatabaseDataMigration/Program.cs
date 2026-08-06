@@ -51,8 +51,9 @@ try
         var sourceColumns = await GetColumnsAsync(source, table);
         var targetColumns = await GetColumnsAsync(target, table);
         var mappings = sourceColumns
-            .Select(sourceColumn => (Source: sourceColumn, Target: ToSnakeCase(sourceColumn)))
-            .Where(mapping => targetColumns.Contains(mapping.Target, StringComparer.OrdinalIgnoreCase))
+            .Select(sourceColumn => (Source: sourceColumn, Target: ResolveTargetColumn(sourceColumn, targetColumns)))
+            .Where(mapping => mapping.Target is not null)
+            .Select(mapping => (mapping.Source, Target: mapping.Target!))
             .ToArray();
 
         var selectSql = $"select {string.Join(", ", mappings.Select(x => QuoteIdentifier(x.Source)))} from {QuoteIdentifier(table)};";
@@ -164,4 +165,12 @@ static string ToSnakeCase(string value)
         else result.Append(character);
     }
     return result.ToString();
+}
+
+static string? ResolveTargetColumn(string sourceColumn, IReadOnlyCollection<string> targetColumns)
+{
+    var snakeCase = ToSnakeCase(sourceColumn);
+    return targetColumns.FirstOrDefault(column => string.Equals(column, snakeCase, StringComparison.OrdinalIgnoreCase))
+        ?? targetColumns.FirstOrDefault(column => string.Equals(column, sourceColumn, StringComparison.Ordinal))
+        ?? targetColumns.FirstOrDefault(column => string.Equals(column, sourceColumn, StringComparison.OrdinalIgnoreCase));
 }
