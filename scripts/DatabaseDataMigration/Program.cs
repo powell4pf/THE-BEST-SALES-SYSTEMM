@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 
 const string sourceVariable = "SOURCE_CONNECTION_STRING";
 const string targetVariable = "TARGET_CONNECTION_STRING";
@@ -75,7 +76,11 @@ try
             for (var index = 0; index < mappings.Length; index++)
             {
                 var value = reader.IsDBNull(index) ? DBNull.Value : reader.GetValue(index);
-                insert.Parameters.AddWithValue(parameterNames[index], value);
+                var parameter = insert.Parameters.AddWithValue(parameterNames[index], value);
+                if (string.Equals(mappings[index].Target, "Changes", StringComparison.OrdinalIgnoreCase))
+                {
+                    parameter.NpgsqlDbType = NpgsqlDbType.Jsonb;
+                }
             }
             await insert.ExecuteNonQueryAsync();
             count++;
