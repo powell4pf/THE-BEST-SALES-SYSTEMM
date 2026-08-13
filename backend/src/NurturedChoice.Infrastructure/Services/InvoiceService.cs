@@ -90,52 +90,56 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<Guid> CreateDraftAsync(CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-        var invoiceNumber = string.IsNullOrWhiteSpace(request.InvoiceNumber)
-            ? await GenerateInvoiceNumberAsync(cancellationToken)
-            : await EnsureInvoiceNumberAsync(request.InvoiceNumber.Trim(), cancellationToken);
-
-        var invoice = new Invoice
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            InvoiceNumber = invoiceNumber,
-            LpoNumber = request.LpoNumber?.Trim(),
-            InvoiceDate = request.InvoiceDate,
-            ParentGroupId = request.ParentGroupId,
-            BranchId = request.BranchId,
-            Salesperson = request.Salesperson?.Trim(),
-            PaymentTerms = request.PaymentTerms?.Trim(),
-            DueDate = request.DueDate,
-            Notes = string.IsNullOrWhiteSpace(request.Notes) ? DefaultInvoiceNotes : request.Notes.Trim(),
-            Status = InvoiceStatus.Draft,
-            CreatedBy = userId
-        };
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+            var invoiceNumber = string.IsNullOrWhiteSpace(request.InvoiceNumber)
+                ? await GenerateInvoiceNumberAsync(cancellationToken)
+                : await EnsureInvoiceNumberAsync(request.InvoiceNumber.Trim(), cancellationToken);
 
-        foreach (var item in request.Items)
-        {
-            var lineTotal = Math.Round(item.Quantity * item.UnitPrice, 2);
-            invoice.Items.Add(new InvoiceItem
+            var invoice = new Invoice
             {
-                ProductId = item.ProductId,
-                ItemName = item.ItemName.Trim(),
-                ItemDescription = item.ItemDescription?.Trim(),
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                Discount = 0,
-                Tax = 0,
-                LineTotal = lineTotal,
+                InvoiceNumber = invoiceNumber,
+                LpoNumber = request.LpoNumber?.Trim(),
+                InvoiceDate = request.InvoiceDate,
+                ParentGroupId = request.ParentGroupId,
+                BranchId = request.BranchId,
+                Salesperson = request.Salesperson?.Trim(),
+                PaymentTerms = request.PaymentTerms?.Trim(),
+                DueDate = request.DueDate,
+                Notes = string.IsNullOrWhiteSpace(request.Notes) ? DefaultInvoiceNotes : request.Notes.Trim(),
+                Status = InvoiceStatus.Draft,
                 CreatedBy = userId
-            });
-        }
+            };
 
-        invoice.Subtotal = invoice.Items.Sum(x => x.Quantity * x.UnitPrice);
-        invoice.DiscountTotal = 0;
-        invoice.TaxTotal = 0;
-        invoice.GrandTotal = invoice.Items.Sum(x => x.LineTotal);
+            foreach (var item in request.Items)
+            {
+                var lineTotal = Math.Round(item.Quantity * item.UnitPrice, 2);
+                invoice.Items.Add(new InvoiceItem
+                {
+                    ProductId = item.ProductId,
+                    ItemName = item.ItemName.Trim(),
+                    ItemDescription = item.ItemDescription?.Trim(),
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    Discount = 0,
+                    Tax = 0,
+                    LineTotal = lineTotal,
+                    CreatedBy = userId
+                });
+            }
 
-        _db.Invoices.Add(invoice);
-        await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return invoice.Id;
+            invoice.Subtotal = invoice.Items.Sum(x => x.Quantity * x.UnitPrice);
+            invoice.DiscountTotal = 0;
+            invoice.TaxTotal = 0;
+            invoice.GrandTotal = invoice.Items.Sum(x => x.LineTotal);
+
+            _db.Invoices.Add(invoice);
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return invoice.Id;
+        });
     }
 
     public async Task<bool> FinalizeAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
@@ -160,11 +164,15 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-        var deleted = await PermanentlyDeleteAsync(id, cancellationToken, activeOnly: true);
-        if (!deleted) return false;
-        await transaction.CommitAsync(cancellationToken);
-        return true;
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+            var deleted = await PermanentlyDeleteAsync(id, cancellationToken, activeOnly: true);
+            if (!deleted) return false;
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        });
     }
 
     private async Task<string> EnsureInvoiceNumberAsync(string invoiceNumber, CancellationToken cancellationToken)
