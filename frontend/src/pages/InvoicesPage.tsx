@@ -559,7 +559,7 @@ export function InvoicesPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="invoice-items-toolbar sticky top-0 z-20 flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-950/95">
               <div>
                 <h4 className="text-base font-semibold text-slate-950 dark:text-white">Invoice Items</h4>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Pick a product and the price will seed automatically.</p>
@@ -568,7 +568,7 @@ export function InvoicesPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-        onClick={() => append({ id: undefined, productId: '', productName: '', quantity: '1', unitPrice: '0' })}
+                onClick={() => append({ id: undefined, productId: '', productName: '', quantity: '1', unitPrice: '0' })}
               >
                 <Plus className="h-4 w-4" />
                 Add Item

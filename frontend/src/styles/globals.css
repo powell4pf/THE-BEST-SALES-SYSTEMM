@@ -273,6 +273,7 @@ a {
   .data-table tbody td:last-child > div { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
   .data-table tbody td:last-child::before { padding-top: 0.45rem; }
   .data-table tbody td:last-child button { min-height: 2.5rem; }
+  .invoice-items-toolbar { top: -0.25rem; margin-inline: -0.15rem; }
 }
 
 @keyframes slide-up {
