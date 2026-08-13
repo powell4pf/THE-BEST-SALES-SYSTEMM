@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -111,6 +111,8 @@ export function InvoicesPage() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const invoicesQuery = useQuery({ queryKey: ['invoices'], queryFn: () => api.listInvoices() });
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: () => api.listCustomers() });
@@ -242,8 +244,10 @@ export function InvoicesPage() {
       await queryClient.invalidateQueries({ queryKey: ['nextInvoiceNumber'] });
       setModalOpen(false);
       setEditingId(null);
+      setSubmissionMessage(null);
       reset(emptyValues('', customers, products));
-    }
+    },
+    onError: (error) => setSubmissionMessage((error as Error).message || 'The invoice could not be saved. Please try again.')
   });
 
   const finalizeInvoice = useMutation({
@@ -281,11 +285,13 @@ export function InvoicesPage() {
 
   function openCreate() {
     setEditingId(null);
+    setSubmissionMessage(null);
     setModalOpen(true);
   }
 
   function openEdit(id: string) {
     setEditingId(id);
+    setSubmissionMessage(null);
     setModalOpen(true);
   }
 
@@ -400,7 +406,13 @@ export function InvoicesPage() {
   }
 
   function submit(values: InvoiceFormValues, finalize = false) {
+    setSubmissionMessage(null);
     saveInvoice.mutate({ values, finalize });
+  }
+
+  function showValidationErrors() {
+    setSubmissionMessage('Please complete the required invoice details before finalizing this sale.');
+    formRef.current?.parentElement?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const isLoading = invoicesQuery.isLoading || customersQuery.isLoading || productsQuery.isLoading;
@@ -424,16 +436,18 @@ export function InvoicesPage() {
         onClose={() => {
           setModalOpen(false);
           setEditingId(null);
+          setSubmissionMessage(null);
         }}
         footer={
           <>
+            {submissionMessage ? <div role="alert" className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">{submissionMessage}</div> : null}
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
             {editingId ? (
-              <Button onClick={handleSubmit((values) => submit(values))} disabled={isSubmitting || saveInvoice.isPending || invoiceDetailsQuery.isLoading || nextInvoiceNumberQuery.isLoading}>Save Draft</Button>
+              <Button onClick={handleSubmit((values) => submit(values), showValidationErrors)} disabled={isSubmitting || saveInvoice.isPending || invoiceDetailsQuery.isLoading || nextInvoiceNumberQuery.isLoading}>{saveInvoice.isPending ? 'Saving…' : 'Save Draft'}</Button>
             ) : (
               <>
-                <Button variant="outline" onClick={handleSubmit((values) => submit(values))} disabled={isSubmitting || saveInvoice.isPending || nextInvoiceNumberQuery.isLoading}>Save Draft</Button>
-                <Button onClick={handleSubmit((values) => submit(values, true))} disabled={isSubmitting || saveInvoice.isPending || nextInvoiceNumberQuery.isLoading}>Create & Finalize Sale</Button>
+                <Button variant="outline" onClick={handleSubmit((values) => submit(values), showValidationErrors)} disabled={isSubmitting || saveInvoice.isPending || nextInvoiceNumberQuery.isLoading}>Save Draft</Button>
+                <Button onClick={handleSubmit((values) => submit(values, true), showValidationErrors)} disabled={isSubmitting || saveInvoice.isPending || nextInvoiceNumberQuery.isLoading}>{saveInvoice.isPending ? 'Finalizing sale…' : 'Create & Finalize Sale'}</Button>
               </>
             )}
           </>
@@ -441,7 +455,7 @@ export function InvoicesPage() {
       >
         {saveInvoice.error ? <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">{(saveInvoice.error as Error).message}</div> : null}
         {Object.keys(errors).length > 0 ? <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">Please correct the highlighted invoice fields before creating the draft.</div> : null}
-        <form className="space-y-8" onSubmit={handleSubmit((values) => submit(values))}>
+        <form ref={formRef} className="space-y-8" onSubmit={handleSubmit((values) => submit(values), showValidationErrors)}>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Invoice Number" required error={errors.invoiceNumber?.message}>
               <Input {...form.register('invoiceNumber')} />
