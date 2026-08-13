@@ -249,6 +249,8 @@ export type AccountsReceivableAgingItemDto = {
 };
 
 export type AccountsReceivableAgingDto = { items: AccountsReceivableAgingItemDto[] };
+export type ReportColumnDto = { key: string; label: string; type: 'text' | 'number' | 'currency' };
+export type ReportTableDto = { key: string; title: string; description: string; columns: ReportColumnDto[]; rows: Array<Record<string, string | number | null>> };
 
 export type CollectionInvoiceDto = { invoiceId: string; invoiceNumber: string; branch: string | null; invoiceDate: string; dueDate: string | null; total: number; paid: number; outstanding: number; daysOverdue: number };
 export type CollectionCustomerDto = { customerId: string; customerName: string; contactPerson: string | null; email: string | null; phone: string | null; creditLimit: number; outstandingBalance: number; currentBalance: number; overdueBalance: number; oldestDaysOverdue: number; riskStatus: string; followUpStatus: string; nextFollowUpDate: string | null; lastContactedAt: string | null; lastContactMethod: string | null; notes: string | null; invoices: CollectionInvoiceDto[] };

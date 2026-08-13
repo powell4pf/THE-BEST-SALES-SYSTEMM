@@ -11,21 +11,29 @@ public sealed class DashboardService : IDashboardService
     private readonly SalesDbContext _db;
     public DashboardService(SalesDbContext db) => _db = db;
 
-    private static DateOnly NairobiToday()
+    private static (DateOnly Today, DateTime StartUtc, DateTime EndUtc) NairobiTodayWindow()
     {
         var zoneId = OperatingSystem.IsWindows() ? "E. Africa Standard Time" : "Africa/Nairobi";
         var zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
-        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone));
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone));
+        var localStart = DateTime.SpecifyKind(today.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, zone);
+        return (today, startUtc, startUtc.AddDays(1));
     }
 
     public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken ct = default)
     {
-        var today = NairobiToday();
+        var (today, todayStartUtc, tomorrowStartUtc) = NairobiTodayWindow();
         var monthStart = new DateOnly(today.Year, today.Month, 1);
         var yearStart = new DateOnly(today.Year, 1, 1);
         var invoices = _db.Invoices.AsNoTracking().Where(x => !x.IsDeleted && x.Status != InvoiceStatus.Cancelled && x.Status != InvoiceStatus.Draft);
         var totalSales = await invoices.SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
-        var todaySales = await invoices.Where(x => x.InvoiceDate == today).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
+        // A sale is visible on the day it was recorded. InvoiceDate remains the
+        // accounting date for the monthly and annual totals, while this window
+        // also covers a sale entered today with a back-dated invoice date.
+        var todaySales = await invoices
+            .Where(x => x.InvoiceDate == today || (x.CreatedAt >= todayStartUtc && x.CreatedAt < tomorrowStartUtc))
+            .SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
         var monthlySales = await invoices.Where(x => x.InvoiceDate >= monthStart).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
         var annualSales = await invoices.Where(x => x.InvoiceDate >= yearStart).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
         var outstanding = await invoices.Where(x => x.Status != InvoiceStatus.Paid).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
@@ -38,7 +46,7 @@ public sealed class DashboardService : IDashboardService
 
     public async Task<IReadOnlyList<SalesTrendPointDto>> GetSalesTrendAsync(string range, CancellationToken ct = default)
     {
-        var today = NairobiToday();
+        var (today, _, _) = NairobiTodayWindow();
         var start = new DateOnly(today.Year, today.Month, 1).AddMonths(-5);
         var rows = await _db.Invoices.AsNoTracking().Where(x => x.InvoiceDate >= start && !x.IsDeleted && x.Status != InvoiceStatus.Cancelled && x.Status != InvoiceStatus.Draft).GroupBy(x => new { x.InvoiceDate.Year, x.InvoiceDate.Month }).Select(g => new { g.Key.Year, g.Key.Month, Sales = g.Sum(x => x.GrandTotal) }).ToListAsync(ct);
         return Enumerable.Range(0, 6).Select(i => { var date = new DateOnly(start.Year, start.Month, 1).AddMonths(i); var row = rows.FirstOrDefault(x => x.Year == date.Year && x.Month == date.Month); return new SalesTrendPointDto(date.ToString("MMM"), row?.Sales ?? 0); }).ToList();

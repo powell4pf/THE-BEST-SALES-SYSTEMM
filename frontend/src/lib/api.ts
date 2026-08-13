@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   AccountsReceivableAgingDto,
+  ReportTableDto,
   CreateCreditNoteRequest,
   CreateInvoiceRequest,
   CreateParentGroupRequest,
@@ -250,6 +251,9 @@ export const api = {
   },
   async getAccountsReceivableAging(): Promise<AccountsReceivableAgingDto> {
     return request<AccountsReceivableAgingDto>('/api/v1/reports/accounts-receivable-aging');
+  },
+  async getReport(reportKey: string): Promise<ReportTableDto> {
+    return request<ReportTableDto>(`/api/v1/reports/${reportKey}`);
   },
   async getCollectionsOverview(): Promise<import('./apiTypes').CollectionsOverviewDto> {
     return request<import('./apiTypes').CollectionsOverviewDto>('/api/v1/collections/overview');

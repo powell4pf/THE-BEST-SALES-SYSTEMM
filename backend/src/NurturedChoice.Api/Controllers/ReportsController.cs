@@ -17,4 +17,7 @@ public sealed class ReportsController : ControllerBase
 
     [HttpGet("accounts-receivable-aging")]
     public Task<AccountsReceivableAgingDto> AccountsReceivableAging(CancellationToken cancellationToken) => _service.GetAccountsReceivableAgingAsync(cancellationToken);
+
+    [HttpGet("{reportKey}")]
+    public Task<ReportTableDto> Report(string reportKey, CancellationToken cancellationToken) => _service.GetReportAsync(reportKey, cancellationToken);
 }

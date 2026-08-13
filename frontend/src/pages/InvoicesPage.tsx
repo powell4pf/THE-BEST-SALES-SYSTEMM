@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Printer, Trash2 } from 'lucide-react';
+import { CheckCircle2, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { Field, Modal } from '../components/Modal';
 import { Button } from '../components/ui/button';
@@ -19,7 +19,14 @@ import { openLetterheadPrintWindow } from '../lib/print';
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
 function addDays(date: string, days: number) {
@@ -192,6 +199,12 @@ export function InvoicesPage() {
       align: 'right',
       render: (row) => (
         <div className="flex justify-end gap-2">
+          {row.status === 'Draft' && (
+            <Button size="sm" variant="outline" onClick={() => finalizeInvoice.mutate(row.id)} disabled={finalizeInvoice.isPending}>
+              <CheckCircle2 className="h-4 w-4" />
+              Finalize
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => openEdit(row.id)}>
             <Pencil className="h-4 w-4" />
             Edit
@@ -210,13 +223,15 @@ export function InvoicesPage() {
   ];
 
   const saveInvoice = useMutation({
-    mutationFn: async (values: InvoiceFormValues) => {
+    mutationFn: async ({ values, finalize }: { values: InvoiceFormValues; finalize: boolean }) => {
       const request = toRequest(values);
       if (editingId) {
         await api.updateInvoice(editingId, request);
         return editingId;
       }
-      return api.createInvoice(request);
+      const invoiceId = await api.createInvoice(request);
+      if (finalize) await api.finalizeInvoice(invoiceId);
+      return invoiceId;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -228,6 +243,14 @@ export function InvoicesPage() {
       setModalOpen(false);
       setEditingId(null);
       reset(emptyValues('', customers, products));
+    }
+  });
+
+  const finalizeInvoice = useMutation({
+    mutationFn: (id: string) => api.finalizeInvoice(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
   });
 
@@ -376,8 +399,8 @@ export function InvoicesPage() {
     openLetterheadPrintWindow(`Print Invoice ${invoice.invoiceNumber}`, body, styles);
   }
 
-  function submit(values: InvoiceFormValues) {
-    saveInvoice.mutate(values);
+  function submit(values: InvoiceFormValues, finalize = false) {
+    saveInvoice.mutate({ values, finalize });
   }
 
   const isLoading = invoicesQuery.isLoading || customersQuery.isLoading || productsQuery.isLoading;
@@ -405,15 +428,20 @@ export function InvoicesPage() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit(submit)} disabled={isSubmitting || saveInvoice.isPending || invoiceDetailsQuery.isLoading || nextInvoiceNumberQuery.isLoading}>
-              {editingId ? 'Save Draft' : 'Create Draft'}
-            </Button>
+            {editingId ? (
+              <Button onClick={handleSubmit((values) => submit(values))} disabled={isSubmitting || saveInvoice.isPending || invoiceDetailsQuery.isLoading || nextInvoiceNumberQuery.isLoading}>Save Draft</Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={handleSubmit((values) => submit(values))} disabled={isSubmitting || saveInvoice.isPending || nextInvoiceNumberQuery.isLoading}>Save Draft</Button>
+                <Button onClick={handleSubmit((values) => submit(values, true))} disabled={isSubmitting || saveInvoice.isPending || nextInvoiceNumberQuery.isLoading}>Create & Finalize Sale</Button>
+              </>
+            )}
           </>
         }
       >
         {saveInvoice.error ? <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">{(saveInvoice.error as Error).message}</div> : null}
         {Object.keys(errors).length > 0 ? <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">Please correct the highlighted invoice fields before creating the draft.</div> : null}
-        <form className="space-y-8" onSubmit={handleSubmit(submit)}>
+        <form className="space-y-8" onSubmit={handleSubmit((values) => submit(values))}>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Invoice Number" required error={errors.invoiceNumber?.message}>
               <Input {...form.register('invoiceNumber')} />

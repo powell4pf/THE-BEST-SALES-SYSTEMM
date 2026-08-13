@@ -3,8 +3,9 @@ import { BarChart2, ShoppingBag, FileText } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { AccountsReceivableAgingReport } from './AccountsReceivableAgingReport';
+import { ReportTablePage } from './ReportTablePage';
 
-type ReportKey = 'accountsReceivableAging' | 'salesByCustomer' | 'salesByProduct';
+type ReportKey = 'accountsReceivableAging' | 'salesByCustomer' | 'salesByProduct' | 'salesBySalesperson' | 'inventoryValuation' | 'stockMovementHistory' | 'inventoryAging' | 'paymentHistory';
 
 const reports = [
   {
@@ -41,6 +42,9 @@ export function ReportsPage() {
   if (activeReport === 'accountsReceivableAging') {
     return <AccountsReceivableAgingReport onBack={() => setActiveReport(null)} />;
   }
+  if (activeReport) {
+    return <ReportTablePage reportKey={reportPath(activeReport)} onBack={() => setActiveReport(null)} />;
+  }
 
   return (
     <div className="space-y-8">
@@ -61,7 +65,6 @@ export function ReportsPage() {
                   variant="outline"
                   size="sm"
                   className="mt-6 w-full"
-                  disabled={report.key !== 'accountsReceivableAging'}
                   onClick={() => setActiveReport(report.key as ReportKey)}
                 >
                   View Report
@@ -73,4 +76,8 @@ export function ReportsPage() {
       ))}
     </div>
   );
+}
+
+function reportPath(key: Exclude<ReportKey, 'accountsReceivableAging'>) {
+  return key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
