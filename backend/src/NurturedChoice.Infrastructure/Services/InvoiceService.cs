@@ -10,6 +10,7 @@ namespace NurturedChoice.Infrastructure.Services;
 
 public sealed class InvoiceService : IInvoiceService
 {
+    private const string DefaultInvoiceNotes = "Thank you for doing business with us.";
     private readonly SalesDbContext _db;
 
     public InvoiceService(SalesDbContext db)
@@ -104,7 +105,7 @@ public sealed class InvoiceService : IInvoiceService
             Salesperson = request.Salesperson?.Trim(),
             PaymentTerms = request.PaymentTerms?.Trim(),
             DueDate = request.DueDate,
-            Notes = request.Notes?.Trim(),
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? DefaultInvoiceNotes : request.Notes.Trim(),
             Status = InvoiceStatus.Draft,
             CreatedBy = userId
         };
@@ -151,7 +152,7 @@ public sealed class InvoiceService : IInvoiceService
     {
         var invoice = await _db.Invoices.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (invoice is null || invoice.Status != InvoiceStatus.Draft) return false;
-        invoice.LpoNumber = request.LpoNumber?.Trim(); invoice.InvoiceDate = request.InvoiceDate; invoice.ParentGroupId = request.ParentGroupId; invoice.BranchId = request.BranchId; invoice.Salesperson = request.Salesperson?.Trim(); invoice.PaymentTerms = request.PaymentTerms?.Trim(); invoice.DueDate = request.DueDate; invoice.Notes = request.Notes?.Trim(); invoice.Items.Clear();
+        invoice.LpoNumber = request.LpoNumber?.Trim(); invoice.InvoiceDate = request.InvoiceDate; invoice.ParentGroupId = request.ParentGroupId; invoice.BranchId = request.BranchId; invoice.Salesperson = request.Salesperson?.Trim(); invoice.PaymentTerms = request.PaymentTerms?.Trim(); invoice.DueDate = request.DueDate; invoice.Notes = string.IsNullOrWhiteSpace(request.Notes) ? DefaultInvoiceNotes : request.Notes.Trim(); invoice.Items.Clear();
         foreach (var item in request.Items) invoice.Items.Add(new InvoiceItem { ProductId = item.ProductId, ItemName = item.ItemName.Trim(), ItemDescription = item.ItemDescription?.Trim(), Quantity = item.Quantity, UnitPrice = item.UnitPrice, Discount = 0, Tax = 0, LineTotal = Math.Round(item.Quantity * item.UnitPrice, 2), CreatedBy = userId });
         invoice.Subtotal = invoice.Items.Sum(x => x.Quantity * x.UnitPrice); invoice.DiscountTotal = 0; invoice.TaxTotal = 0; invoice.GrandTotal = invoice.Items.Sum(x => x.LineTotal); invoice.UpdatedBy = userId;
         await _db.SaveChangesAsync(cancellationToken); return true;

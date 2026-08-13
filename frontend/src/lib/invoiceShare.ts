@@ -23,6 +23,7 @@ export type InvoicePdfData = {
 export type InvoiceShareResult = 'shared' | 'downloaded';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
+const defaultInvoiceNote = 'Thank you for doing business with us.';
 
 function money(value: number) {
   return `KES ${currency.format(value)}`;
@@ -208,17 +209,15 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   pdf.text(money(total), pageWidth - margin - 3, y + 6.5, { align: 'right' });
   y += 20;
 
-  if (invoice.notes) {
-    const notes = pdf.splitTextToSize(invoice.notes, contentWidth);
-    ensureSpace(notes.length * 4.2 + 15);
-    pdf.setTextColor(51, 65, 85);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.text('Notes', margin, y);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(71, 85, 105);
-    pdf.text(notes, margin, y + 6);
-  }
+  const notes = pdf.splitTextToSize(invoice.notes?.trim() || defaultInvoiceNote, contentWidth);
+  ensureSpace(notes.length * 4.2 + 15);
+  pdf.setTextColor(51, 65, 85);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  pdf.text('Notes', margin, y);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(71, 85, 105);
+  pdf.text(notes, margin, y + 6);
 
   const pages = pdf.getNumberOfPages();
   for (let page = 1; page <= pages; page += 1) {

@@ -18,6 +18,7 @@ import { openLetterheadPrintWindow } from '../lib/print';
 import { downloadInvoicePdf, shareInvoiceByEmail, shareInvoiceByWhatsApp, type InvoicePdfData } from '../lib/invoiceShare';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
+const defaultInvoiceNote = 'Thank you for doing business with us.';
 
 function today() {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -69,7 +70,7 @@ function emptyValues(invoiceNumber: string, customers: ParentGroupSummaryDto[], 
     salesperson: '',
     paymentTerms: '7 Days',
     dueDate: addDays(today(), 90),
-    notes: '',
+    notes: defaultInvoiceNote,
     items: [
       {
         id: undefined,
@@ -98,7 +99,7 @@ function toRequest(values: InvoiceFormValues): CreateInvoiceRequest {
     branchId: values.branchId,
     salesperson: values.salesperson.trim(),
     paymentTerms: values.paymentTerms.trim(),
-    notes: values.notes.trim(),
+    notes: values.notes.trim() || defaultInvoiceNote,
     items: values.items.map((item) => ({
       productId: item.productId,
       itemName: item.productName.trim() || 'Invoice item',
@@ -414,7 +415,7 @@ export function InvoicesPage() {
 
           <div class="notes">
             <p><strong>Notes</strong></p>
-            <p>${invoice.notes || 'No additional notes.'}</p>
+            <p>${invoice.notes || defaultInvoiceNote}</p>
           </div>
     `;
     openLetterheadPrintWindow(`Print Invoice ${invoice.invoiceNumber}`, body, styles);
@@ -553,7 +554,7 @@ export function InvoicesPage() {
               <Input {...form.register('paymentTerms')} />
             </Field>
             <Field label="Notes" error={errors.notes?.message} className="md:col-span-2">
-              <Textarea {...form.register('notes')} placeholder="Deliver in the morning." />
+              <Textarea {...form.register('notes')} placeholder="Thank you for doing business with us." />
             </Field>
           </div>
 
