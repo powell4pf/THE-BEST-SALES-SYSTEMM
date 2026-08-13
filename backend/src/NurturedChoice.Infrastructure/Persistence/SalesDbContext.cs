@@ -34,6 +34,7 @@ public class SalesDbContext : DbContext, IUnitOfWork
     public DbSet<StatementLine> StatementLines => Set<StatementLine>();
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<MonthEndReminder> MonthEndReminders => Set<MonthEndReminder>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<AppRole> AppRoles => Set<AppRole>();
     public DbSet<AppPermission> AppPermissions => Set<AppPermission>();
@@ -67,6 +68,7 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<StatementLine>().ToTable("statement_lines");
         modelBuilder.Entity<CompanyProfile>().ToTable("company_profiles");
         modelBuilder.Entity<SystemSetting>().ToTable("system_settings");
+        modelBuilder.Entity<MonthEndReminder>().ToTable("month_end_reminders");
         modelBuilder.Entity<AppUser>().ToTable("app_users");
         modelBuilder.Entity<AppRole>().ToTable("app_roles");
         modelBuilder.Entity<AppPermission>().ToTable("app_permissions");
@@ -76,6 +78,11 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<StockBalance>().ToTable("stock_balances");
         modelBuilder.Entity<StockMovement>().ToTable("stock_movements");
         modelBuilder.Entity<StockAdjustment>().ToTable("stock_adjustments");
+
+        modelBuilder.Entity<MonthEndReminder>().HasIndex(x => new { x.AppUserId, x.PeriodKey }).IsUnique();
+        modelBuilder.Entity<MonthEndReminder>().Property(x => x.PeriodKey).HasMaxLength(7);
+        modelBuilder.Entity<MonthEndReminder>().Property(x => x.Title).HasMaxLength(160);
+        modelBuilder.Entity<MonthEndReminder>().Property(x => x.Message).HasMaxLength(1000);
 
         // Follow-ups are the one new table created by the SQL migration and
         // therefore intentionally use its snake_case column names. The

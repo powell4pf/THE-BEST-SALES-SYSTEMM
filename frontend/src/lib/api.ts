@@ -274,6 +274,8 @@ export const api = {
   async updateInvoiceNumberSettings(requestBody: import('./apiTypes').UpdateInvoiceNumberSettingsRequest): Promise<import('./apiTypes').InvoiceNumberSettingsDto> { return request('/api/v1/settings/invoice-number', { method: 'PUT', body: JSON.stringify(requestBody) }); },
   async getSystemSettings(): Promise<import('./apiTypes').SystemSettingDto[]> { return request('/api/v1/settings/system'); },
   async listUsers(): Promise<import('./apiTypes').UserRoleDto[]> { return request('/api/v1/users'); },
+  async getMonthEndReminders(): Promise<import('./apiTypes').MonthEndReminderDto[]> { return request('/api/v1/reminders/month-end'); },
+  async markMonthEndReminderRead(id: string): Promise<void> { await request(`/api/v1/reminders/month-end/${id}/read`, { method: 'POST' }); },
   async getInvoice(id: string): Promise<InvoiceDto> {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);
   },

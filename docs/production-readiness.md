@@ -15,3 +15,7 @@
 Deploy `backend` and `frontend` as separate Railway services using their Dockerfiles. Configure the backend with `ConnectionStrings__DefaultConnection`, `Jwt__SigningKey`, `AllowedHosts`, `Cors__AllowedOrigins__0`, `ASPNETCORE_ENVIRONMENT=Production`, and `ASPNETCORE_URLS=http://+:${{PORT}}`. Configure the frontend build with `VITE_API_BASE_URL` set to the public backend URL.
 
 The API health endpoint is `/api/v1/health`; the frontend nginx image includes SPA fallbacks for direct navigation to application routes. The Windows auto-start scripts are for the office computer only and are not part of the Railway deployment.
+
+### Month-end reminders
+
+Set a strong `Automation__MonthEndReminderKey` variable on the backend service. Create a Railway cron service that calls the backend once daily at 6:05pm Nairobi time (15:05 UTC) with `POST /api/v1/reminders/automation/month-end` and header `X-Automation-Key` set to that value. The endpoint only creates reminders on the final calendar day of the month, is idempotent, and never creates duplicate reminders. Users then receive an in-app prompt linking directly to Statements and Reports.
