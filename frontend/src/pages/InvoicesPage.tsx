@@ -298,8 +298,7 @@ export function InvoicesPage() {
   function handleDelete(id: string) {
     const invoice = invoicesQuery.data?.items.find((item) => item.id === id);
     if (!invoice) return;
-    // Add a confirmation dialog to prevent accidental deletes.
-    if (!window.confirm(`Are you sure you want to delete invoice ${invoice.invoiceNumber}? This action cannot be undone.`)) return;
+    if (!window.confirm(`Permanently delete invoice ${invoice.invoiceNumber}? Its invoice number will become available again. This cannot be undone.`)) return;
     deleteInvoice.mutate(id);
   }
 

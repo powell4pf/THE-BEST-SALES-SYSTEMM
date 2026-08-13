@@ -89,6 +89,7 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<Guid> CreateDraftAsync(CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var invoiceNumber = string.IsNullOrWhiteSpace(request.InvoiceNumber)
             ? await GenerateInvoiceNumberAsync(cancellationToken)
             : await EnsureInvoiceNumberAsync(request.InvoiceNumber.Trim(), cancellationToken);
@@ -132,6 +133,7 @@ public sealed class InvoiceService : IInvoiceService
 
         _db.Invoices.Add(invoice);
         await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return invoice.Id;
     }
 
@@ -157,26 +159,54 @@ public sealed class InvoiceService : IInvoiceService
 
     public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
     {
-        var invoice = await _db.Invoices.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
-        if (invoice is null) return false;
-        invoice.Status = InvoiceStatus.Cancelled;
-        invoice.IsDeleted = true;
-        invoice.DeletedAt = DateTime.UtcNow;
-        invoice.DeletedBy = userId;
-        invoice.UpdatedBy = userId;
-        await _db.SaveChangesAsync(cancellationToken);
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var deleted = await PermanentlyDeleteAsync(id, cancellationToken, activeOnly: true);
+        if (!deleted) return false;
+        await transaction.CommitAsync(cancellationToken);
         return true;
     }
 
     private async Task<string> EnsureInvoiceNumberAsync(string invoiceNumber, CancellationToken cancellationToken)
     {
-        var exists = await _db.Invoices.AnyAsync(x => x.InvoiceNumber == invoiceNumber, cancellationToken);
-        if (exists)
+        var existing = await _db.Invoices.FirstOrDefaultAsync(x => x.InvoiceNumber == invoiceNumber, cancellationToken);
+        if (existing is not null)
         {
+            // Remove records hidden by the previous soft-delete behaviour so a
+            // legitimately deleted invoice number can be used again.
+            if (existing.IsDeleted)
+            {
+                await PermanentlyDeleteAsync(existing.Id, cancellationToken, activeOnly: false);
+                return invoiceNumber;
+            }
             throw new InvalidOperationException($"Invoice number '{invoiceNumber}' already exists.");
         }
 
         return invoiceNumber;
+    }
+
+    private async Task<bool> PermanentlyDeleteAsync(Guid id, CancellationToken cancellationToken, bool activeOnly)
+    {
+        var invoice = await _db.Invoices
+            .Include(x => x.Items)
+            .FirstOrDefaultAsync(x => x.Id == id && (!activeOnly || !x.IsDeleted), cancellationToken);
+        if (invoice is null) return false;
+
+        // Keep payment and credit-note history intact, but remove only the link
+        // to the invoice that is being permanently deleted.
+        var paymentAllocations = await _db.PaymentAllocations
+            .Where(x => x.InvoiceId == id)
+            .ToListAsync(cancellationToken);
+        foreach (var allocation in paymentAllocations) allocation.InvoiceId = null;
+
+        var creditNotes = await _db.CreditNotes
+            .Where(x => x.InvoiceId == id)
+            .ToListAsync(cancellationToken);
+        foreach (var creditNote in creditNotes) creditNote.InvoiceId = null;
+
+        _db.InvoiceItems.RemoveRange(invoice.Items);
+        _db.Invoices.Remove(invoice);
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private async Task<string> GenerateInvoiceNumberAsync(CancellationToken cancellationToken)
