@@ -179,6 +179,28 @@ a {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
 }
 
+.update-prompt {
+  position: fixed;
+  z-index: 60;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  max-width: min(26rem, calc(100vw - 2rem));
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(18px);
+}
+
+.dark .update-prompt {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(11, 18, 32, 0.96);
+}
+
 .dark .mobile-nav-item-active {
   background: #fff;
   color: #0f172a;
@@ -274,6 +296,7 @@ a {
   .data-table tbody td:last-child::before { padding-top: 0.45rem; }
   .data-table tbody td:last-child button { min-height: 2.5rem; }
   .invoice-items-toolbar { top: -0.25rem; margin-inline: -0.15rem; }
+  .update-prompt { right: 0.75rem; bottom: calc(5.75rem + env(safe-area-inset-bottom)); left: 0.75rem; max-width: none; }
 }
 
 @keyframes slide-up {

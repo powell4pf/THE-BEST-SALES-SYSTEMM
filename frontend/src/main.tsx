@@ -10,7 +10,28 @@ import ErrorBoundary from './pages/ErrorBoundary';
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' });
+    let reloadForUpdate = false;
+    const announceUpdate = (registration: ServiceWorkerRegistration) => {
+      window.dispatchEvent(new CustomEvent<ServiceWorkerRegistration>('nurtured-choice-update-available', { detail: registration }));
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadForUpdate) window.location.reload();
+    });
+
+    void navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' }).then((registration) => {
+      if (registration.waiting && navigator.serviceWorker.controller) announceUpdate(registration);
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        if (!worker) return;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) announceUpdate(registration);
+        });
+      });
+      window.addEventListener('nurtured-choice-update-requested', () => { reloadForUpdate = true; }, { once: true });
+    }).catch(() => {
+      // The application remains fully usable when a browser blocks service workers.
+    });
   });
 }
 
