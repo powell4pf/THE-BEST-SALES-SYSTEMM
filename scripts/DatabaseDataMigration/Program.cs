@@ -32,6 +32,14 @@ await target.OpenAsync();
 var sourceTables = await GetTablesAsync(source);
 var targetTables = await GetTablesAsync(target);
 var tables = tableOrder.Where(sourceTables.Contains).Where(targetTables.Contains).ToArray();
+var sourceIds = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+foreach (var dependencyTable in new[] { "invoices", "payments", "statements" })
+{
+    if (sourceTables.Contains(dependencyTable))
+    {
+        sourceIds[dependencyTable] = await GetIdsAsync(source, dependencyTable);
+    }
+}
 
 Console.WriteLine($"Source tables found: {tables.Length}");
 Console.WriteLine(apply
@@ -61,9 +69,18 @@ try
         await using var sourceCommand = new NpgsqlCommand(selectSql, source);
         await using var reader = await sourceCommand.ExecuteReaderAsync();
         var count = 0;
+        var skipped = 0;
 
         while (await reader.ReadAsync())
         {
+            if (string.Equals(table, "payment_allocations", StringComparison.OrdinalIgnoreCase) &&
+                HasMissingPaymentAllocationReference(reader, mappings, sourceIds, out var missingReference))
+            {
+                skipped++;
+                Console.WriteLine($"payment_allocations: skipped orphan row ({missingReference})");
+                continue;
+            }
+
             if (!apply)
             {
                 count++;
@@ -86,7 +103,9 @@ try
             count++;
         }
 
-        Console.WriteLine($"{table}: {count} row(s)");
+        Console.WriteLine(skipped == 0
+            ? $"{table}: {count} row(s)"
+            : $"{table}: {count} row(s), {skipped} orphan row(s) skipped");
     }
 
     if (apply)
@@ -126,6 +145,61 @@ static async Task<string[]> GetColumnsAsync(NpgsqlConnection connection, string 
     var columns = new List<string>();
     while (await reader.ReadAsync()) columns.Add(reader.GetString(0));
     return columns.ToArray();
+}
+
+static async Task<HashSet<string>> GetIdsAsync(NpgsqlConnection connection, string table)
+{
+    var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var sql = $"select {QuoteIdentifier("Id")} from {QuoteIdentifier(table)};";
+    await using var command = new NpgsqlCommand(sql, connection);
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        if (!reader.IsDBNull(0))
+        {
+            ids.Add(Convert.ToString(reader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture)!);
+        }
+    }
+    return ids;
+}
+
+static bool HasMissingPaymentAllocationReference(
+    NpgsqlDataReader reader,
+    IReadOnlyList<(string Source, string Target)> mappings,
+    IReadOnlyDictionary<string, HashSet<string>> sourceIds,
+    out string missingReference)
+{
+    foreach (var dependency in new[]
+             {
+                 (Source: "PaymentId", Table: "payments"),
+                 (Source: "InvoiceId", Table: "invoices"),
+                 (Source: "StatementId", Table: "statements")
+             })
+    {
+        var index = -1;
+        for (var mappingIndex = 0; mappingIndex < mappings.Count; mappingIndex++)
+        {
+            if (string.Equals(mappings[mappingIndex].Source, dependency.Source, StringComparison.OrdinalIgnoreCase))
+            {
+                index = mappingIndex;
+                break;
+            }
+        }
+
+        if (index < 0 || reader.IsDBNull(index)) continue;
+
+        var value = Convert.ToString(reader.GetValue(index), System.Globalization.CultureInfo.InvariantCulture);
+        if (!string.IsNullOrWhiteSpace(value) &&
+            sourceIds.TryGetValue(dependency.Table, out var ids) &&
+            !ids.Contains(value))
+        {
+            missingReference = $"{dependency.Source}={value}";
+            return true;
+        }
+    }
+
+    missingReference = string.Empty;
+    return false;
 }
 
 static async Task ExecuteAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string sql)
