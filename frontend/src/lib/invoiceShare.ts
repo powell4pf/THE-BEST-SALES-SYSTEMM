@@ -59,6 +59,22 @@ function formatBranch(branch?: InvoiceBranch, salesperson?: string | null) {
     .join('\n');
 }
 
+async function loadLetterhead() {
+  try {
+    const response = await fetch('/letterhead.png', { cache: 'force-cache' });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Unable to read the company letterhead.'));
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdfData): Promise<File> {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
@@ -66,31 +82,41 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 16;
   const contentWidth = pageWidth - margin * 2;
-  let y = 18;
+  const letterhead = await loadLetterhead();
+  const contentStart = letterhead ? 68 : 45;
+  let y = contentStart;
+
+  const drawPageBackground = () => {
+    if (letterhead) pdf.addImage(letterhead, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+  };
 
   const ensureSpace = (height: number) => {
     if (y + height <= pageHeight - 20) return;
     pdf.addPage();
-    y = 18;
+    drawPageBackground();
+    y = contentStart;
   };
 
-  pdf.setFillColor(15, 23, 42);
-  pdf.rect(0, 0, pageWidth, 34, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(19);
-  pdf.text('NURTURED CHOICE PRODUCTS', margin, 15);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.text('Sales & Distribution', margin, 21);
+  drawPageBackground();
+  if (!letterhead) {
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageWidth, 34, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(19);
+    pdf.text('NURTURED CHOICE PRODUCTS', margin, 15);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.text('Sales & Distribution', margin, 21);
+  }
+  pdf.setTextColor(letterhead ? 17 : 255, letterhead ? 24 : 255, letterhead ? 39 : 255);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(18);
-  pdf.text('INVOICE', pageWidth - margin, 15, { align: 'right' });
+  pdf.text('INVOICE', pageWidth - margin, letterhead ? 57 : 15, { align: 'right' });
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
-  pdf.text(invoice.invoiceNumber, pageWidth - margin, 22, { align: 'right' });
+  pdf.text(invoice.invoiceNumber, pageWidth - margin, letterhead ? 63 : 22, { align: 'right' });
   pdf.setTextColor(17, 24, 39);
-  y = 45;
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
