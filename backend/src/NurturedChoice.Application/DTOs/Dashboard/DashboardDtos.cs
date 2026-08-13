@@ -5,3 +5,14 @@ public sealed record SalesTrendPointDto(string Label, decimal Sales);
 public sealed record ProductPerformanceDto(string ProductName, decimal QuantitySold, decimal Revenue);
 public sealed record CustomerRevenueDto(string CustomerName, decimal Revenue);
 public sealed record RecentActivityItemDto(string Type, string Description, DateTime OccurredAt, string? Reference);
+public sealed record DashboardPeriodDto(
+    DateOnly StartDate,
+    DateOnly EndDate,
+    decimal Sales,
+    decimal PreviousSales,
+    decimal? SalesChangePercentage,
+    int InvoiceCount,
+    int PreviousInvoiceCount,
+    decimal OutstandingBalance,
+    IReadOnlyList<SalesTrendPointDto> Trend,
+    IReadOnlyList<CustomerRevenueDto> TopCustomers);

@@ -285,6 +285,18 @@ export type SalesTrendPointDto = { label: string; sales: number };
 export type ProductPerformanceDto = { productName: string; quantitySold: number; revenue: number };
 export type CustomerRevenueDto = { customerName: string; revenue: number };
 export type RecentActivityItemDto = { type: string; description: string; occurredAt: string; reference: string | null };
+export type DashboardPeriodDto = {
+  startDate: string;
+  endDate: string;
+  sales: number;
+  previousSales: number;
+  salesChangePercentage: number | null;
+  invoiceCount: number;
+  previousInvoiceCount: number;
+  outstandingBalance: number;
+  trend: SalesTrendPointDto[];
+  topCustomers: CustomerRevenueDto[];
+};
 
 export type CompanyProfileDto = {
   id: string;

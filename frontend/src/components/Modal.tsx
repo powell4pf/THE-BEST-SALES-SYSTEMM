@@ -15,9 +15,9 @@ export function Modal({ open, title, description, footer, onClose, children }: P
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm" onClick={onClose}>
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 dark:border-white/10">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-0 py-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-8" onClick={onClose}>
+      <div className="max-h-[94dvh] w-full max-w-4xl overflow-hidden rounded-t-[2rem] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 sm:max-h-[92vh] sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 dark:border-white/10 sm:px-6 sm:py-5">
           <div>
             <h3 className="text-xl font-semibold text-slate-950 dark:text-white">{title}</h3>
             {description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
@@ -26,8 +26,8 @@ export function Modal({ open, title, description, footer, onClose, children }: P
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="max-h-[calc(92vh-14rem)] overflow-y-auto px-6 py-5">{children}</div>
-        {footer ? <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-white/10">{footer}</div> : null}
+        <div className="max-h-[calc(94dvh-12rem)] overflow-y-auto px-4 py-4 sm:max-h-[calc(92vh-14rem)] sm:px-6 sm:py-5">{children}</div>
+        {footer ? <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-white/10 sm:gap-3 sm:px-6 sm:py-4">{footer}</div> : null}
       </div>
     </div>
   );
@@ -51,4 +51,3 @@ export function Field({ label, error, required, className, children, ...props }:
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
+import { CheckCircle2, Download, Mail, MessageCircle, Pencil, Plus, Printer, Share2, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { Field, Modal } from '../components/Modal';
 import { Button } from '../components/ui/button';
@@ -15,6 +15,7 @@ import type { TableColumn } from '../lib/types';
 import { api } from '../lib/api';
 import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto, PagedResult } from '../lib/apiTypes';
 import { openLetterheadPrintWindow } from '../lib/print';
+import { downloadInvoicePdf, shareInvoiceByEmail, shareInvoiceByWhatsApp, type InvoicePdfData } from '../lib/invoiceShare';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -112,6 +113,7 @@ export function InvoicesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const invoicesQuery = useQuery({ queryKey: ['invoices'], queryFn: () => api.listInvoices() });
@@ -214,6 +216,18 @@ export function InvoicesPage() {
           <Button size="sm" variant="ghost" onClick={() => handlePrint(row.id)}>
             <Printer className="h-4 w-4" />
             Print
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => handleDownloadPdf(row.id)} aria-label={`Download ${row.invoiceNumber} as PDF`}>
+            <Download className="h-4 w-4" />
+            PDF
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => handleWhatsAppShare(row.id)} aria-label={`Share ${row.invoiceNumber} by WhatsApp`}>
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => handleEmailShare(row.id)} aria-label={`Share ${row.invoiceNumber} by email`}>
+            <Mail className="h-4 w-4" />
+            Email
           </Button>
           <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteInvoice.isPending}>
             <Trash2 className="h-4 w-4" />
@@ -404,6 +418,48 @@ export function InvoicesPage() {
     openLetterheadPrintWindow(`Print Invoice ${invoice.invoiceNumber}`, body, styles);
   }
 
+  async function getInvoicePdfData(id: string): Promise<InvoicePdfData> {
+    const invoice = await queryClient.fetchQuery({ queryKey: ['invoice', id], queryFn: () => api.getInvoice(id) });
+    const customer = findCustomer(invoice.parentGroupId);
+    const branch = customer?.branches.find((item) => item.id === invoice.branchId);
+    return { invoice, customer, branch };
+  }
+
+  function handleShareError(error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') return;
+    setShareMessage(error instanceof Error ? `Unable to prepare the invoice PDF: ${error.message}` : 'Unable to prepare the invoice PDF. Please try again.');
+  }
+
+  async function handleDownloadPdf(id: string) {
+    setShareMessage(null);
+    try {
+      await downloadInvoicePdf(await getInvoicePdfData(id));
+      setShareMessage('Invoice PDF downloaded.');
+    } catch (error) {
+      handleShareError(error);
+    }
+  }
+
+  async function handleWhatsAppShare(id: string) {
+    setShareMessage(null);
+    try {
+      const result = await shareInvoiceByWhatsApp(await getInvoicePdfData(id));
+      setShareMessage(result === 'shared' ? 'Choose WhatsApp in the share sheet to send the attached invoice PDF.' : 'Invoice PDF downloaded and a WhatsApp message is ready. Attach the downloaded PDF before sending.');
+    } catch (error) {
+      handleShareError(error);
+    }
+  }
+
+  async function handleEmailShare(id: string) {
+    setShareMessage(null);
+    try {
+      const result = await shareInvoiceByEmail(await getInvoicePdfData(id));
+      setShareMessage(result === 'shared' ? 'Choose your email app in the share sheet to send the attached invoice PDF.' : 'Invoice PDF downloaded and an email is ready. Attach the downloaded PDF before sending.');
+    } catch (error) {
+      handleShareError(error);
+    }
+  }
+
   function submit(values: InvoiceFormValues, finalize = false) {
     setSubmissionMessage(null);
     saveInvoice.mutate({ values, finalize });
@@ -420,6 +476,12 @@ export function InvoicesPage() {
 
   return (
     <>
+      {shareMessage && (
+        <div className="mx-auto mb-4 max-w-7xl rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100">
+          <Share2 className="mr-2 inline h-4 w-4" />
+          {shareMessage}
+        </div>
+      )}
       <DataTable
         title="Invoice Management"
         subtitle={isLoading ? 'Loading invoices from the API...' : 'Create, edit, and validate customer invoices.'}

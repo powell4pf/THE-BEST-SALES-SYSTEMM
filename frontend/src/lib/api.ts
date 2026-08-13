@@ -305,6 +305,10 @@ export const api = {
   async getDashboardSummary(): Promise<DashboardSummaryDto> {
     return request<DashboardSummaryDto>('/api/v1/dashboard/summary');
   },
+  async getDashboardPeriod(startDate: string, endDate: string): Promise<import('./apiTypes').DashboardPeriodDto> {
+    const params = new URLSearchParams({ startDate, endDate });
+    return request<import('./apiTypes').DashboardPeriodDto>(`/api/v1/dashboard/period?${params.toString()}`);
+  },
   async getSalesTrend(range = '6m'): Promise<SalesTrendPointDto[]> {
     return request<SalesTrendPointDto[]>(`/api/v1/dashboard/sales-trend?range=${range}`);
   },

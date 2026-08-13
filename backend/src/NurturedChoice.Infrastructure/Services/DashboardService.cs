@@ -44,6 +44,51 @@ public sealed class DashboardService : IDashboardService
             await _db.Statements.CountAsync(ct), await _db.CreditNotes.CountAsync(ct), outstanding);
     }
 
+    public async Task<DashboardPeriodDto> GetPeriodAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct = default)
+    {
+        var periodLength = endDate.DayNumber - startDate.DayNumber + 1;
+        if (periodLength is < 1 or > 366)
+            throw new ArgumentOutOfRangeException(nameof(endDate), "The dashboard period must be between 1 and 366 days.");
+
+        var previousEndDate = startDate.AddDays(-1);
+        var previousStartDate = previousEndDate.AddDays(-(periodLength - 1));
+        var validInvoices = _db.Invoices.AsNoTracking()
+            .Where(x => !x.IsDeleted && x.Status != InvoiceStatus.Cancelled && x.Status != InvoiceStatus.Draft);
+        var currentInvoices = validInvoices.Where(x => x.InvoiceDate >= startDate && x.InvoiceDate <= endDate);
+        var previousInvoices = validInvoices.Where(x => x.InvoiceDate >= previousStartDate && x.InvoiceDate <= previousEndDate);
+
+        var sales = await currentInvoices.SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
+        var previousSales = await previousInvoices.SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
+        var invoiceCount = await currentInvoices.CountAsync(ct);
+        var previousInvoiceCount = await previousInvoices.CountAsync(ct);
+        var outstandingBalance = await currentInvoices.Where(x => x.Status != InvoiceStatus.Paid).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
+
+        var dailySales = await currentInvoices
+            .GroupBy(x => x.InvoiceDate)
+            .Select(group => new { Date = group.Key, Sales = group.Sum(x => x.GrandTotal) })
+            .ToListAsync(ct);
+        var salesByDate = dailySales.ToDictionary(x => x.Date, x => x.Sales);
+        var trend = Enumerable.Range(0, periodLength)
+            .Select(offset =>
+            {
+                var date = startDate.AddDays(offset);
+                var label = periodLength <= 7 ? date.ToString("ddd") : periodLength <= 31 ? date.ToString("d MMM") : date.ToString("d MMM");
+                return new SalesTrendPointDto(label, salesByDate.GetValueOrDefault(date));
+            })
+            .ToList();
+
+        var customerRows = await currentInvoices
+            .GroupBy(x => x.ParentGroup!.CompanyName)
+            .Select(group => new { CustomerName = group.Key, Revenue = group.Sum(x => x.GrandTotal) })
+            .OrderByDescending(x => x.Revenue)
+            .Take(10)
+            .ToListAsync(ct);
+        var topCustomers = customerRows.Select(x => new CustomerRevenueDto(x.CustomerName, x.Revenue)).ToList();
+        decimal? salesChangePercentage = previousSales == 0 ? null : Math.Round((sales - previousSales) / previousSales * 100, 1);
+
+        return new DashboardPeriodDto(startDate, endDate, sales, previousSales, salesChangePercentage, invoiceCount, previousInvoiceCount, outstandingBalance, trend, topCustomers);
+    }
+
     public async Task<IReadOnlyList<SalesTrendPointDto>> GetSalesTrendAsync(string range, CancellationToken ct = default)
     {
         var (today, _, _) = NairobiTodayWindow();
