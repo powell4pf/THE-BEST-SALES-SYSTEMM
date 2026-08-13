@@ -9,6 +9,7 @@ type Props = {
   onNavigate: (path: string) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  onClose?: () => void;
   className?: string;
 };
 
@@ -27,7 +28,7 @@ const navigation = [
   { label: 'Settings', path: '/settings', icon: Settings }
 ];
 
-export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed, className }: Props) {
+export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed, onClose, className }: Props) {
   const summaryQuery = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 15000, staleTime: 0 });
   const todaySales = summaryQuery.data?.todaySales ?? 0;
   const money = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 });
@@ -51,7 +52,7 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
           return (
             <button
               key={item.path}
-              onClick={() => onNavigate(item.path)}
+              onClick={() => { onNavigate(item.path); onClose?.(); }}
               className={cn(
                 'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-200',
                 active ? 'bg-white text-slate-950 shadow-soft' : 'text-slate-300 hover:bg-white/6 hover:text-white'

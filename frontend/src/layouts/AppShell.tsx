@@ -18,6 +18,7 @@ export function AppShell({ children }: Props) {
   // with the top-bar toggle during the current session.
   const [theme, setTheme] = useState<ThemeMode>('light');
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
@@ -26,6 +27,13 @@ export function AppShell({ children }: Props) {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  useEffect(() => {
+    if (!mobileNavigationOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [mobileNavigationOpen]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -68,8 +76,8 @@ export function AppShell({ children }: Props) {
 
   return (
     <div className="app-bg min-h-screen text-slate-950 dark:text-white">
-      <div className={`mx-auto grid min-h-screen max-w-[100rem] gap-6 p-4 transition-[grid-template-columns] duration-300 ease-in-out lg:p-6 ${collapsed ? 'lg:grid-cols-[88px_1fr]' : 'lg:grid-cols-[280px_1fr]'}`}>
-        <Sidebar currentPath={location.pathname} onNavigate={navigate} collapsed={collapsed} onToggleCollapsed={() => setCollapsed((value) => !value)} className="transition-all duration-300 ease-in-out" />
+      <div className={`mx-auto grid min-h-screen max-w-[100rem] gap-4 p-3 transition-[grid-template-columns] duration-300 ease-in-out sm:gap-6 sm:p-4 lg:p-6 ${collapsed ? 'lg:grid-cols-[88px_1fr]' : 'lg:grid-cols-[280px_1fr]'}`}>
+        <Sidebar currentPath={location.pathname} onNavigate={navigate} collapsed={collapsed} onToggleCollapsed={() => setCollapsed((value) => !value)} className="hidden transition-all duration-300 ease-in-out lg:flex" />
         <main className="flex min-w-0 flex-col gap-6">
           <Topbar
             theme={theme}
@@ -80,10 +88,25 @@ export function AppShell({ children }: Props) {
             onLogout={handleLogout}
             searchValue={searchValue}
             userName={auth.user?.displayName ?? auth.user?.email ?? 'Signed in'}
+            onOpenNavigation={() => setMobileNavigationOpen(true)}
           />
           <div className="animate-fade-in">{children}</div>
         </main>
       </div>
+      {mobileNavigationOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileNavigationOpen(false)}>
+          <div onClick={(event) => event.stopPropagation()}>
+            <Sidebar
+              currentPath={location.pathname}
+              onNavigate={navigate}
+              collapsed={false}
+              onToggleCollapsed={() => setMobileNavigationOpen(false)}
+              onClose={() => setMobileNavigationOpen(false)}
+              className="mobile-sidebar"
+            />
+          </div>
+        </div>
+      )}
       <CommandPalette
         open={paletteOpen}
         query={paletteQuery}

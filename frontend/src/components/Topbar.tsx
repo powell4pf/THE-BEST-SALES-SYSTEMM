@@ -1,4 +1,4 @@
-import { Command, RefreshCw, Search, LogOut } from 'lucide-react';
+import { Command, Menu, RefreshCw, Search, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ThemeToggle } from './ThemeToggle';
@@ -13,15 +13,19 @@ type Props = {
   onLogout: () => void;
   searchValue: string;
   userName: string;
+  onOpenNavigation: () => void;
 };
 
-export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, onRefresh, onLogout, searchValue, userName }: Props) {
+export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, onRefresh, onLogout, searchValue, userName, onOpenNavigation }: Props) {
   return (
-    <header className="flex flex-col gap-4 rounded-[2rem] border border-slate-200/70 bg-white/80 p-4 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-white/6 lg:flex-row lg:items-center lg:justify-between">
-      <div>
+    <header className="flex flex-col gap-4 rounded-[1.5rem] border border-slate-200/70 bg-white/80 p-4 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-white/6 sm:rounded-[2rem] lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-start gap-3">
+        <Button variant="outline" size="sm" className="mt-1 shrink-0 lg:hidden" onClick={onOpenNavigation} aria-label="Open navigation menu"><Menu className="h-4 w-4" /></Button>
+        <div>
         <div className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">Enterprise Sales & Distribution</div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Operate the floor with clarity</h1>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-2xl">Operate the floor with clarity</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Signed in as {userName}</p>
+        </div>
       </div>
 
       <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
@@ -36,7 +40,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={onOpenPalette}>
+          <Button variant="outline" onClick={onOpenPalette} className="hidden sm:inline-flex">
             <Command className="h-4 w-4" />
             Ctrl K
           </Button>

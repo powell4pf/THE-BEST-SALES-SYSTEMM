@@ -8,6 +8,12 @@ import './styles/globals.css';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './pages/ErrorBoundary';
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' });
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
