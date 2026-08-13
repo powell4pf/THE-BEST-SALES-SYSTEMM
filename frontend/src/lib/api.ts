@@ -278,10 +278,13 @@ export const api = {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);
   },
   async createInvoice(requestBody: CreateInvoiceRequest): Promise<string> {
-    return request<string>('/api/v1/invoices', {
+    const response = await request<{ id: string } | string>('/api/v1/invoices', {
       method: 'POST',
       body: JSON.stringify(requestBody)
     });
+    if (typeof response === 'string') return response;
+    if (response?.id) return response.id;
+    throw new Error('The Sales API created the invoice but did not return its ID for finalization.');
   },
   async getNextInvoiceNumber(): Promise<{ nextNumber: string }> {
     const invoices = await this.listInvoices(1000);
