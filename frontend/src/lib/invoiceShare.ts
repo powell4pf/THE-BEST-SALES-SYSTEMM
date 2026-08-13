@@ -116,6 +116,10 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
   pdf.text(invoice.invoiceNumber, pageWidth - margin, letterhead ? 63 : 22, { align: 'right' });
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(8.5);
+  pdf.text(`LPO No: ${invoice.lpoNumber || 'Not provided'}`, pageWidth - margin, letterhead ? 68 : 27, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(17, 24, 39);
 
   pdf.setFont('helvetica', 'bold');

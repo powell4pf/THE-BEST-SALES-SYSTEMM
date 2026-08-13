@@ -327,6 +327,7 @@ export function InvoicesPage() {
             body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111827; background: #fff; }
             .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
             .invoice-title { font-size: 28px; font-weight: 700; margin: 0; }
+            .lpo-number { margin: 5px 0 0; font-size: 11px; font-weight: 700; color: #475569; }
             .invoice-meta { text-align: right; }
             .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 4px; }
             .value { font-size: 14px; font-weight: 600; color: #111827; margin: 0; }
@@ -356,6 +357,7 @@ export function InvoicesPage() {
             <div>
               <p class="label">Invoice</p>
               <h1 class="invoice-title">${invoice.invoiceNumber}</h1>
+              <p class="lpo-number">LPO No: ${invoice.lpoNumber || 'Not provided'}</p>
             </div>
             <div class="invoice-meta">
               <p class="label">Date</p>
