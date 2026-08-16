@@ -24,7 +24,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
         <Button variant="outline" size="sm" className="h-10 w-10 shrink-0 rounded-xl px-0 lg:hidden" onClick={onOpenNavigation} aria-label="Open navigation menu"><Menu className="h-4 w-4" /></Button>
         <div>
         <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400 lg:text-xs lg:tracking-[0.35em]">Nurtured Choice</div>
-        <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950 dark:text-white lg:mt-2 lg:text-2xl">{pageTitle}<span className="hidden lg:inline"> · Operate with clarity</span></h1>
+        <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950 dark:text-white lg:mt-2 lg:text-2xl">{pageTitle}</h1>
         <p className="hidden text-sm text-slate-500 dark:text-slate-400 lg:mt-1 lg:block">Signed in as {userName}</p>
         </div>
       </div>
