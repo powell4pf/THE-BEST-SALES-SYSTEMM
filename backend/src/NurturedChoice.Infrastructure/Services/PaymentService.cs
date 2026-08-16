@@ -65,48 +65,52 @@ public sealed class PaymentService : IPaymentService
 
     public async Task<bool> DeleteAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
-        if (payment is null) return false;
-
-        var allocations = await _db.PaymentAllocations
-            .Where(x => x.PaymentId == payment.Id && !x.IsDeleted)
-            .ToListAsync(cancellationToken);
-        var invoiceIds = allocations.Where(x => x.InvoiceId.HasValue).Select(x => x.InvoiceId!.Value).Distinct().ToArray();
-
-        payment.IsDeleted = true;
-        payment.DeletedBy = userId;
-        payment.DeletedAt = DateTime.UtcNow;
-        foreach (var allocation in allocations)
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            allocation.IsDeleted = true;
-            allocation.DeletedBy = userId;
-            allocation.DeletedAt = DateTime.UtcNow;
-        }
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+            var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
+            if (payment is null) return false;
 
-        if (invoiceIds.Length > 0)
-        {
-            var invoices = await _db.Invoices.Where(x => invoiceIds.Contains(x.Id) && !x.IsDeleted).ToListAsync(cancellationToken);
-            var remaining = await _db.PaymentAllocations
-                .Where(x => x.InvoiceId.HasValue && invoiceIds.Contains(x.InvoiceId.Value) && !x.IsDeleted)
-                .GroupBy(x => x.InvoiceId!.Value)
-                .Select(x => new { InvoiceId = x.Key, Amount = x.Sum(a => a.Amount) })
-                .ToDictionaryAsync(x => x.InvoiceId, x => x.Amount, cancellationToken);
+            var allocations = await _db.PaymentAllocations
+                .Where(x => x.PaymentId == payment.Id && !x.IsDeleted)
+                .ToListAsync(cancellationToken);
+            var invoiceIds = allocations.Where(x => x.InvoiceId.HasValue).Select(x => x.InvoiceId!.Value).Distinct().ToArray();
 
-            foreach (var invoice in invoices)
+            payment.IsDeleted = true;
+            payment.DeletedBy = userId;
+            payment.DeletedAt = DateTime.UtcNow;
+            foreach (var allocation in allocations)
             {
-                var paid = remaining.GetValueOrDefault(invoice.Id);
-                invoice.Status = paid >= invoice.GrandTotal
-                    ? InvoiceStatus.Paid
-                    : paid > 0
-                        ? InvoiceStatus.PartiallyPaid
-                        : InvoiceStatus.Finalized;
-                invoice.UpdatedBy = userId;
+                allocation.IsDeleted = true;
+                allocation.DeletedBy = userId;
+                allocation.DeletedAt = DateTime.UtcNow;
             }
-        }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return true;
+            if (invoiceIds.Length > 0)
+            {
+                var invoices = await _db.Invoices.Where(x => invoiceIds.Contains(x.Id) && !x.IsDeleted).ToListAsync(cancellationToken);
+                var remaining = await _db.PaymentAllocations
+                    .Where(x => x.InvoiceId.HasValue && invoiceIds.Contains(x.InvoiceId.Value) && !x.IsDeleted)
+                    .GroupBy(x => x.InvoiceId!.Value)
+                    .Select(x => new { InvoiceId = x.Key, Amount = x.Sum(a => a.Amount) })
+                    .ToDictionaryAsync(x => x.InvoiceId, x => x.Amount, cancellationToken);
+
+                foreach (var invoice in invoices)
+                {
+                    var paid = remaining.GetValueOrDefault(invoice.Id);
+                    invoice.Status = paid >= invoice.GrandTotal
+                        ? InvoiceStatus.Paid
+                        : paid > 0
+                            ? InvoiceStatus.PartiallyPaid
+                            : InvoiceStatus.Finalized;
+                    invoice.UpdatedBy = userId;
+                }
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        });
     }
 }
