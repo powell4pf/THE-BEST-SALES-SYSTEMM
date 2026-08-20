@@ -46,17 +46,23 @@ const queryClient = new QueryClient({
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
+const application = (
+  <Router>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </Router>
+);
+
+const authenticatedApplication = googleClientId
+  ? <GoogleOAuthProvider clientId={googleClientId}>{application}</GoogleOAuthProvider>
+  : application;
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <GoogleOAuthProvider clientId={googleClientId ?? ''}>
-          <Router>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </Router>
-        </GoogleOAuthProvider>
+        {authenticatedApplication}
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>

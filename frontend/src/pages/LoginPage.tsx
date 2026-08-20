@@ -28,6 +28,7 @@ const registerSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 type RegisterValues = z.infer<typeof registerSchema>;
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 export function LoginPage() {
   const auth = useAuth();
@@ -155,7 +156,9 @@ export function LoginPage() {
           </div> : null}
 
           {mode === 'login' ? <div className="w-full">
-            <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
+            {googleClientId
+              ? <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
+              : <p className="text-center text-sm text-slate-500">Google sign-in is not configured. Use your email and password.</p>}
           </div> : null}
 
           <div className="mt-6 border-t border-slate-200 pt-5 text-center text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">

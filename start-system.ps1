@@ -39,9 +39,7 @@ function Test-ApiHealth {
 }
 
 function Ensure-FrontendBuild {
-  $distIndex = Join-Path $frontend 'dist\index.html'
-  if (Test-Path -LiteralPath $distIndex) { return }
-  Write-Host 'Building the frontend for the first run...' -ForegroundColor Yellow
+  Write-Host 'Building the frontend with current local settings...' -ForegroundColor Yellow
   Push-Location $frontend
   try {
     npm.cmd run build | Out-Host
