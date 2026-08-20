@@ -3,6 +3,7 @@ using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.Common;
 using NurturedChoice.Application.DTOs.Catalog;
 using NurturedChoice.Domain.Entities.Catalog;
+using NurturedChoice.Domain.Entities.Inventory;
 using NurturedChoice.Domain.Enums;
 using NurturedChoice.Infrastructure.Persistence;
 
@@ -79,6 +80,20 @@ public sealed class ProductService : IProductService
         };
 
         _db.Products.Add(entity);
+        if (entity.CurrentStock != 0)
+        {
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = entity.Id,
+                MovementType = StockMovementType.OpeningBalance,
+                Quantity = entity.CurrentStock,
+                UnitCost = entity.BuyingPrice,
+                SourceDocumentType = "Product",
+                SourceDocumentId = entity.Id,
+                Notes = "Opening stock recorded when the product was created.",
+                CreatedBy = userId
+            });
+        }
         await _db.SaveChangesAsync(cancellationToken);
         return entity.Id;
     }
@@ -96,10 +111,26 @@ public sealed class ProductService : IProductService
         entity.BuyingPrice = request.BuyingPrice;
         entity.SellingPrice = request.SellingPrice;
         entity.Unit = request.Unit.Trim();
+        var stockDelta = request.CurrentStock - entity.CurrentStock;
         entity.CurrentStock = request.CurrentStock;
         entity.MinimumStock = request.MinimumStock;
         entity.ImageUrl = request.ImageUrl?.Trim();
         entity.UpdatedBy = userId;
+
+        if (stockDelta != 0)
+        {
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = entity.Id,
+                MovementType = StockMovementType.Adjustment,
+                Quantity = stockDelta,
+                UnitCost = request.BuyingPrice,
+                SourceDocumentType = "Product",
+                SourceDocumentId = entity.Id,
+                Notes = "Stock movement recorded when the product stock was updated.",
+                CreatedBy = userId
+            });
+        }
 
         await _db.SaveChangesAsync(cancellationToken);
         return true;

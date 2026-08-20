@@ -79,6 +79,29 @@ public static class DatabaseBootstrapper
             create index if not exists ix_delivery_note_items_delivery_note on delivery_note_items(delivery_note_id);
             """);
 
+        // Older databases may already have products and stock balances but no
+        // movement audit rows. Seed one opening-balance entry per such product
+        // so the stock history reflects the inventory already on hand.
+        var productsWithoutMovements = await db.Products
+            .AsNoTracking()
+            .Where(product => !product.IsDeleted && !db.StockMovements.Any(movement => movement.ProductId == product.Id))
+            .ToListAsync();
+        if (productsWithoutMovements.Count > 0)
+        {
+            db.StockMovements.AddRange(productsWithoutMovements.Select(product => new NurturedChoice.Domain.Entities.Inventory.StockMovement
+            {
+                ProductId = product.Id,
+                MovementType = NurturedChoice.Domain.Enums.StockMovementType.OpeningBalance,
+                Quantity = product.CurrentStock,
+                UnitCost = product.BuyingPrice,
+                SourceDocumentType = "Product",
+                SourceDocumentId = product.Id,
+                Notes = "Opening stock history created for an existing product.",
+                CreatedAt = DateTime.UtcNow
+            }));
+            await db.SaveChangesAsync();
+        }
+
         await db.SeedReferenceDataAsync(passwordHasher, app.Environment.IsDevelopment(), app.Configuration["Seed:DemoAdminPassword"]);
     }
 }

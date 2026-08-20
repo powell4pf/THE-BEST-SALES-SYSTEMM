@@ -53,11 +53,8 @@ export function StockPage() {
         <h3 className="text-lg font-semibold text-slate-950 dark:text-white">Stock Movement History</h3>
         <div className="mt-4 space-y-3 text-sm">
           {stockQuery.isLoading && <div className="text-sm text-slate-500 dark:text-slate-400">Loading movements...</div>}
-          {(data?.movements ?? []).map((item, index) => (
-            <div key={index} className="rounded-2xl border border-slate-200/70 bg-slate-50/70 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-              {item}
-            </div>
-          ))}
+          {!stockQuery.isLoading && (data?.movements ?? []).length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500 dark:border-white/15 dark:bg-white/5 dark:text-slate-400">No stock movements have been recorded yet. New stock entries and adjustments will appear here.</div>}
+          {(data?.movements ?? []).map((item, index) => <div key={index} className="rounded-2xl border border-slate-200/70 bg-slate-50/70 px-4 py-3 dark:border-white/10 dark:bg-white/5">{item}</div>)}
         </div>
       </Card>
     </div>
