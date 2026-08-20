@@ -33,7 +33,8 @@ public sealed class NotificationService : INotificationService
             Title = title,
             Message = message,
             Route = route,
-            CreatedBy = userId
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync(cancellationToken);
     }

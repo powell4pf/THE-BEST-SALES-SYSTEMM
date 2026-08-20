@@ -6,7 +6,9 @@ import { api } from '../lib/api';
 import { Button } from './ui/button';
 
 function relativeTime(value: string) {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp < Date.UTC(2000, 0, 1)) return 'Just now';
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (seconds < 60) return 'Just now';
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;

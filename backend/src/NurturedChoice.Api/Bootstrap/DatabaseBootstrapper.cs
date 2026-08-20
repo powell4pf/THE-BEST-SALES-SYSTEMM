@@ -98,6 +98,7 @@ public static class DatabaseBootstrapper
                 deleted_by uuid null
             );
             create index if not exists ix_notifications_user_created on notifications(app_user_id, created_at desc);
+            update notifications set created_at = now() where created_at < timestamp with time zone '2000-01-01 00:00:00+00';
             """);
 
         // Older databases may already have products and stock balances but no
