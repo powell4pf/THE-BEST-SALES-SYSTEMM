@@ -215,6 +215,7 @@ export function CustomersPage() {
         subtitle={customersQuery.isLoading ? 'Loading customers from the API...' : 'Create parent groups, add branches, and track credit limits.'}
         columns={columns}
         rows={rows}
+        isLoading={customersQuery.isLoading}
         emptyMessage={customersQuery.error ? (customersQuery.error as Error).message : 'No customers found.'}
         actions={
           <div className="flex gap-2">

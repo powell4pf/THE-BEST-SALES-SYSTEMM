@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Card } from './ui/card';
 import type { TableColumn } from '../lib/types';
 import { cn } from '../lib/cn';
+import { EmptyState } from './EmptyState';
+import { TableSkeleton } from './ui/skeleton';
 
 type Props<Row extends Record<string, unknown>> = {
   title: string;
@@ -10,9 +12,10 @@ type Props<Row extends Record<string, unknown>> = {
   rows: Row[];
   emptyMessage?: string;
   actions?: ReactNode;
+  isLoading?: boolean;
 };
 
-export function DataTable<Row extends Record<string, unknown>>({ title, subtitle, columns, rows, emptyMessage = 'No records found.', actions }: Props<Row>) {
+export function DataTable<Row extends Record<string, unknown>>({ title, subtitle, columns, rows, emptyMessage = 'No records found.', actions, isLoading = false }: Props<Row>) {
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex flex-col gap-3 border-b border-slate-200/70 px-4 py-4 dark:border-white/10 sm:px-6 sm:py-5 md:flex-row md:items-end md:justify-between">
@@ -22,7 +25,7 @@ export function DataTable<Row extends Record<string, unknown>>({ title, subtitle
         </div>
         {actions}
       </div>
-      <div className="data-table-scroll overflow-x-auto">
+      {isLoading ? <TableSkeleton columns={columns.length} /> : <div className="data-table-scroll overflow-x-auto">
         <table className="data-table min-w-full divide-y divide-slate-200/70 text-left dark:divide-white/10">
           <thead className="bg-slate-50/70 dark:bg-white/5">
             <tr>
@@ -37,7 +40,7 @@ export function DataTable<Row extends Record<string, unknown>>({ title, subtitle
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
-                  {emptyMessage}
+                  <EmptyState title="Nothing here yet" description={emptyMessage} />
                 </td>
               </tr>
             ) : (
@@ -53,7 +56,7 @@ export function DataTable<Row extends Record<string, unknown>>({ title, subtitle
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
     </Card>
   );
 }

@@ -25,6 +25,11 @@ export function AppShell({ children }: Props) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
 
+  function openCommandPalette() {
+    setPaletteQuery('');
+    setPaletteOpen(true);
+  }
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -39,10 +44,13 @@ export function AppShell({ children }: Props) {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setPaletteOpen(true);
+        openCommandPalette();
       }
+      if (!typing && event.key === '/') { event.preventDefault(); openCommandPalette(); }
 
       if (event.key === 'Escape') {
         setPaletteOpen(false);
@@ -85,7 +93,7 @@ export function AppShell({ children }: Props) {
             theme={theme}
             onToggleTheme={() => setTheme((value) => (value === 'dark' ? 'light' : 'dark'))}
             onSearchChange={setSearchValue}
-            onOpenPalette={() => setPaletteOpen(true)}
+            onOpenPalette={openCommandPalette}
             onRefresh={() => window.location.reload()}
             onLogout={handleLogout}
             searchValue={searchValue}

@@ -490,6 +490,7 @@ export function InvoicesPage() {
         subtitle={isLoading ? 'Loading invoices from the API...' : 'Create, edit, and validate customer invoices.'}
         columns={columns}
         rows={rows}
+        isLoading={isLoading}
         actions={<Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Generate Invoice</Button>}
       />
 

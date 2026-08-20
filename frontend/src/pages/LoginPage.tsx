@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
+import { useToast } from '../components/ToastProvider';
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -31,6 +32,7 @@ type RegisterValues = z.infer<typeof registerSchema>;
 
 export function LoginPage() {
   const auth = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,9 @@ export function LoginPage() {
       await auth.loginWithPassword(values.email, values.password);
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
+      toast({ tone: 'error', title: 'Sign-in failed', message });
     }
   }
 
@@ -65,7 +69,9 @@ export function LoginPage() {
       await auth.register(values.displayName, values.email, values.password, values.confirmPassword, values.phoneNumber);
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create your account');
+      const message = err instanceof Error ? err.message : 'Could not create your account';
+      setError(message);
+      toast({ tone: 'error', title: 'Account creation failed', message });
     }
   }
 
@@ -83,7 +89,9 @@ export function LoginPage() {
       await auth.loginWithGoogle(token);
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign-in failed.');
+      const message = err instanceof Error ? err.message : 'Google sign-in failed.';
+      setError(message);
+      toast({ tone: 'error', title: 'Google sign-in failed', message });
     } finally {
       setGoogleLoading(false);
     }

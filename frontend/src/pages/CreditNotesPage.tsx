@@ -263,6 +263,7 @@ export function CreditNotesPage() {
         subtitle={creditNotesQuery.isLoading || customersQuery.isLoading || productsQuery.isLoading ? 'Loading data...' : 'Issue and audit credit notes against invoices.'}
         columns={columns}
         rows={rows}
+        isLoading={creditNotesQuery.isLoading || customersQuery.isLoading || productsQuery.isLoading}
         emptyMessage={creditNotesQuery.error ? (creditNotesQuery.error as Error).message : 'No credit notes found.'}
         actions={<Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Issue Credit Note</Button>}
       />

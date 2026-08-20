@@ -203,6 +203,7 @@ export function ProductsPage() {
         subtitle={productsQuery.isLoading ? 'Loading products from the API...' : 'Manage SKUs, pricing, and inventory health.'}
         columns={columns}
         rows={rows}
+        isLoading={productsQuery.isLoading}
         emptyMessage={productsQuery.error ? (productsQuery.error as Error).message : 'No products found.'}
         actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => downloadCsv('products.csv', (productsQuery.data?.items ?? []).map(p => ({ SKU: p.sku, Product: p.productName, Category: p.category, Stock: p.currentStock, Price: p.sellingPrice, Status: p.status })))}><Download className="h-4 w-4" />Export CSV</Button><Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button></div>}
       />

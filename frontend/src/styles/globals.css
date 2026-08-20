@@ -209,6 +209,43 @@ a {
   backdrop-filter: blur(18px);
 }
 
+.toast-region {
+  position: fixed;
+  z-index: 70;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  width: min(25rem, calc(100vw - 2rem));
+  flex-direction: column;
+  gap: 0.65rem;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+  animation: toast-in 220ms ease-out;
+}
+
+.dark .toast { border-color: rgba(148, 163, 184, 0.25); background: rgba(15, 23, 42, 0.97); color: #f8fafc; }
+.toast-success { border-color: rgba(16, 185, 129, 0.35); color: #047857; }
+.toast-error { border-color: rgba(244, 63, 94, 0.35); color: #be123c; }
+.toast-info { border-color: rgba(14, 165, 233, 0.35); color: #0369a1; }
+.dark .toast-success { color: #6ee7b7; }
+.dark .toast-error { color: #fda4af; }
+.dark .toast-info { color: #7dd3fc; }
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: translateY(0); } }
+
 .month-end-reminder {
   position: fixed;
   z-index: 55;
