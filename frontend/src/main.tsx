@@ -19,7 +19,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       if (reloadForUpdate || navigator.serviceWorker.controller) window.location.reload();
     });
 
-    void navigator.serviceWorker.register('/service-worker.js?v=5', { updateViaCache: 'none' }).then((registration) => {
+    void navigator.serviceWorker.register('/service-worker.js?v=6', { updateViaCache: 'none' }).then((registration) => {
       if (registration.waiting && navigator.serviceWorker.controller) announceUpdate(registration);
       registration.addEventListener('updatefound', () => {
         const worker = registration.installing;
