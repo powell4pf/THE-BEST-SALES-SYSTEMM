@@ -76,6 +76,13 @@ a {
     linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.32));
 }
 
+.dark .app-bg {
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(6, 11, 22, 0.98), rgba(15, 23, 42, 0.98));
+}
+
 .eyebrow {
   color: #e35345;
   font-size: 0.68rem;
