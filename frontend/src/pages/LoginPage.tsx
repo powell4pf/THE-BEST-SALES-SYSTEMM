@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, ShieldCheck, Sparkles, UserPlus } from 'lucide-react';
+import { ArrowRight, Sparkles, UserPlus } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { z } from 'zod';
@@ -108,17 +108,21 @@ export function LoginPage() {
         <section className="hero-panel relative overflow-hidden rounded-[2.5rem] p-8 text-white shadow-2xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.35),_transparent_38%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.22),_transparent_30%),linear-gradient(135deg,#0b1220,#121a2f_45%,#1f2b48)]" />
           <div className="relative flex h-full flex-col justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-200">
-                <ShieldCheck className="h-4 w-4" />
-                Secure access
+            <div className="flex h-full flex-col">
+              <div className="inline-flex w-fit items-center gap-3 rounded-2xl border border-white/20 bg-white/95 px-3 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.18)]">
+                <div className="flex h-10 w-12 items-center justify-center rounded-xl bg-white"><img src="/icons/client-logo-source.png" alt="Nurtured Choice Products logo" className="h-full w-full object-contain" /></div>
+                <div className="leading-none"><div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#d94d40]">Nurtured Choice</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.28em] text-slate-800">Products</div></div>
               </div>
-              <h1 className="mt-6 max-w-xl text-4xl font-semibold tracking-tight md:text-5xl">Your sales operation, ready for its next move.</h1>
-              <p className="mt-4 max-w-xl text-base leading-7 text-slate-200">
-                Create your team account or sign in to manage customers, products, invoices, and inventory with real API-backed data.
-              </p>
-            </div>
+              <div className="mt-auto max-w-xl pb-6 pt-16">
+                <div className="mb-5 h-1 w-16 rounded-full bg-[#e35345]" />
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-sky-200">Sales operations platform</p>
+                <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-[-0.04em] md:text-5xl">Nurtured Choice Products</h1>
+                <p className="mt-5 max-w-lg text-base leading-7 text-slate-200">One beautifully connected workspace for your sales, customers, products, inventory, and documents.</p>
+                <div className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-slate-200"><span className="rounded-full border border-white/15 bg-white/10 px-3 py-2">Sales control</span><span className="rounded-full border border-white/15 bg-white/10 px-3 py-2">Inventory clarity</span><span className="rounded-full border border-white/15 bg-white/10 px-3 py-2">Trusted records</span></div>
+              </div>
 
+              <div className="border-t border-white/10 pt-4 text-xs uppercase tracking-[0.22em] text-slate-400">Built for the Nurtured Choice team</div>
+            </div>
           </div>
         </section>
 
