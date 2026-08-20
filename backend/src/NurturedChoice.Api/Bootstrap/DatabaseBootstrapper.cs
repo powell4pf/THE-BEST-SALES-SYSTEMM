@@ -79,6 +79,27 @@ public static class DatabaseBootstrapper
             create index if not exists ix_delivery_note_items_delivery_note on delivery_note_items(delivery_note_id);
             """);
 
+        await db.Database.ExecuteSqlRawAsync("""
+            create table if not exists notifications (
+                id uuid primary key,
+                app_user_id uuid not null,
+                document_type varchar(60) not null,
+                document_id uuid null,
+                title varchar(180) not null,
+                message varchar(500) not null,
+                route varchar(160) not null,
+                read_at timestamptz null,
+                created_at timestamptz not null default now(),
+                created_by uuid null,
+                updated_at timestamptz null,
+                updated_by uuid null,
+                is_deleted boolean not null default false,
+                deleted_at timestamptz null,
+                deleted_by uuid null
+            );
+            create index if not exists ix_notifications_user_created on notifications(app_user_id, created_at desc);
+            """);
+
         // Older databases may already have products and stock balances but no
         // movement audit rows. Seed one opening-balance entry per such product
         // so the stock history reflects the inventory already on hand.

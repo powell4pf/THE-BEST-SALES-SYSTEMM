@@ -14,11 +14,13 @@ public sealed class InvoicesController : ControllerBase
 {
     private readonly IInvoiceService _invoiceService;
     private readonly ICurrentUserService _currentUser;
+    private readonly INotificationService _notifications;
 
-    public InvoicesController(IInvoiceService invoiceService, ICurrentUserService currentUser)
+    public InvoicesController(IInvoiceService invoiceService, ICurrentUserService currentUser, INotificationService notifications)
     {
         _invoiceService = invoiceService;
         _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     [HttpGet]
@@ -36,6 +38,7 @@ public sealed class InvoicesController : ControllerBase
     public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
     {
         var invoiceId = await _invoiceService.CreateDraftAsync(request, _currentUser.UserId, cancellationToken);
+        await _notifications.CreateAsync(_currentUser.UserId, "Invoice", invoiceId, "Invoice generated", $"Invoice {request.InvoiceNumber ?? invoiceId.ToString()[..8]} was created.", "/invoices", cancellationToken);
         return CreatedAtAction(nameof(GetInvoice), new { id = invoiceId }, new { id = invoiceId });
     }
 

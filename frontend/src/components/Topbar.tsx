@@ -2,6 +2,7 @@ import { Command, Menu, RefreshCw, Search, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ThemeToggle } from './ThemeToggle';
+import { NotificationsMenu } from './NotificationsMenu';
 import type { ThemeMode } from '../lib/types';
 
 type Props = {
@@ -49,6 +50,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
+          <NotificationsMenu />
           <ThemeToggle mode={theme} onToggle={onToggleTheme} />
           <Button variant="ghost" onClick={onLogout}>
             <LogOut className="h-4 w-4" />
@@ -59,6 +61,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
       <div className="flex shrink-0 items-center gap-1 lg:hidden">
         <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onOpenPalette} aria-label="Search"><Search className="h-4 w-4" /></Button>
         <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onRefresh} aria-label="Refresh"><RefreshCw className="h-4 w-4" /></Button>
+        <NotificationsMenu />
         <ThemeToggle mode={theme} onToggle={onToggleTheme} />
       </div>
     </header>

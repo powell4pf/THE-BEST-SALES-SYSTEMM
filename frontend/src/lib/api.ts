@@ -298,6 +298,9 @@ export const api = {
   async listUsers(): Promise<import('./apiTypes').UserRoleDto[]> { return request('/api/v1/users'); },
   async getMonthEndReminders(): Promise<import('./apiTypes').MonthEndReminderDto[]> { return request('/api/v1/reminders/month-end'); },
   async markMonthEndReminderRead(id: string): Promise<void> { await request(`/api/v1/reminders/month-end/${id}/read`, { method: 'POST' }); },
+  async listNotifications(): Promise<import('./apiTypes').NotificationDto[]> { return request('/api/v1/notifications'); },
+  async markNotificationRead(id: string): Promise<void> { await request(`/api/v1/notifications/${id}/read`, { method: 'POST' }); },
+  async markAllNotificationsRead(): Promise<void> { await request('/api/v1/notifications/read-all', { method: 'POST' }); },
   async getInvoice(id: string): Promise<InvoiceDto> {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);
   },
