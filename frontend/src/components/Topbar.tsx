@@ -20,7 +20,7 @@ type Props = {
 
 export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, onRefresh, onLogout, searchValue, userName, onOpenNavigation, pageTitle }: Props) {
   return (
-    <header className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-4 py-3 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 lg:flex-row lg:px-6 lg:py-4">
+    <header className="relative z-40 flex items-center justify-between gap-3 rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-4 py-3 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 lg:flex-row lg:px-6 lg:py-4">
       <div className="flex min-w-0 items-center gap-3">
         <Button variant="outline" size="sm" className="h-10 w-10 shrink-0 rounded-xl px-0 lg:hidden" onClick={onOpenNavigation} aria-label="Open navigation menu"><Menu className="h-4 w-4" /></Button>
         <div>
