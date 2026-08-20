@@ -8,6 +8,7 @@ import { StockPage } from '../pages/StockPage';
 import { InvoicesPage } from '../pages/InvoicesPage';
 import { StatementsPage } from '../pages/StatementsPage';
 import { CreditNotesPage } from '../pages/CreditNotesPage';
+import { DeliveryNotesPage } from '../pages/DeliveryNotesPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { PortalPage } from '../pages/PortalPage';
 import { SettingsPage } from '../pages/SettingsPage';
@@ -33,6 +34,7 @@ export function AppRoutes() {
         <Route path="/invoices" element={<InvoicesPage />} />
         <Route path="/statements" element={<StatementsPage />} />
         <Route path="/credit-notes" element={<CreditNotesPage />} />
+        <Route path="/delivery-notes" element={<DeliveryNotesPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />

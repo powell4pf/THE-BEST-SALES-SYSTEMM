@@ -217,6 +217,36 @@ export type CreditNoteDetailsDto = {
   total: number;
 };
 
+export type CreateDeliveryNoteRequest = {
+  deliveryNoteNumber: string;
+  deliveryDate: string;
+  customerId: string;
+  branchId?: string | null;
+  notes?: string | null;
+  items: Array<{ productId: string; quantity: number }>;
+};
+
+export type DeliveryNoteListItemDto = {
+  id: string;
+  deliveryNoteNumber: string;
+  customerName: string;
+  deliveryDate: string;
+  productCount: number;
+  totalQuantity: number;
+  status: string;
+};
+
+export type DeliveryNoteDetailsDto = {
+  id: string;
+  deliveryNoteNumber: string;
+  customerId: string;
+  branchId: string | null;
+  deliveryDate: string;
+  notes: string | null;
+  status: string;
+  items: Array<{ id: string; productId: string | null; productName: string; quantity: number }>;
+};
+
 export type InvoiceSummaryDto = InvoiceDto;
 
 export type StatementTransactionDto = {

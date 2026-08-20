@@ -23,6 +23,8 @@ public static class ReferenceDataSeeder
         ("statements.manage", "Manage Statements", "Can generate statements"),
         ("creditnotes.view", "View Credit Notes", "Can view credit notes"),
         ("creditnotes.manage", "Manage Credit Notes", "Can create and issue credit notes"),
+        ("deliverynotes.view", "View Delivery Notes", "Can view delivery notes"),
+        ("deliverynotes.manage", "Manage Delivery Notes", "Can create and edit delivery notes"),
         ("reports.view", "View Reports", "Can view reports and dashboards"),
         ("settings.manage", "Manage Settings", "Can update company and system settings"),
         ("users.manage", "Manage Users", "Can manage users and roles")

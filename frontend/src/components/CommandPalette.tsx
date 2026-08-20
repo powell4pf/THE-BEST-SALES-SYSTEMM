@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Sparkles, Users, PackageSearch, ShoppingCart, Settings, WalletCards } from 'lucide-react';
+import { ClipboardCheck, Search, Sparkles, Users, PackageSearch, ShoppingCart, Settings, WalletCards } from 'lucide-react';
 import { Input } from './ui/input';
 import { cn } from '../lib/cn';
 
@@ -15,6 +15,7 @@ const items: CommandItem[] = [
   { label: 'Customers', path: '/customers', description: 'Parent groups and branches', icon: <Users className="h-4 w-4" /> },
   { label: 'Products', path: '/products', description: 'Catalog and pricing', icon: <PackageSearch className="h-4 w-4" /> },
   { label: 'Invoices', path: '/invoices', description: 'Billing and payments', icon: <ShoppingCart className="h-4 w-4" /> },
+  { label: 'Delivery Notes', path: '/delivery-notes', description: 'Products delivered to customers', icon: <ClipboardCheck className="h-4 w-4" /> },
   { label: 'Settings', path: '/settings', description: 'Company and system settings', icon: <Settings className="h-4 w-4" /> }
   ,{ label: 'Payments', path: '/payments', description: 'Record and allocate payments', icon: <WalletCards className="h-4 w-4" /> }
 ];

@@ -30,6 +30,8 @@ public class SalesDbContext : DbContext, IUnitOfWork
     public DbSet<CollectionFollowUp> CollectionFollowUps => Set<CollectionFollowUp>();
     public DbSet<CreditNote> CreditNotes => Set<CreditNote>();
     public DbSet<CreditNoteItem> CreditNoteItems => Set<CreditNoteItem>();
+    public DbSet<DeliveryNote> DeliveryNotes => Set<DeliveryNote>();
+    public DbSet<DeliveryNoteItem> DeliveryNoteItems => Set<DeliveryNoteItem>();
     public DbSet<Statement> Statements => Set<Statement>();
     public DbSet<StatementLine> StatementLines => Set<StatementLine>();
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
@@ -64,6 +66,34 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<CollectionFollowUp>().ToTable("collection_follow_ups");
         modelBuilder.Entity<CreditNote>().ToTable("credit_notes");
         modelBuilder.Entity<CreditNoteItem>().ToTable("credit_note_items");
+        modelBuilder.Entity<DeliveryNote>().ToTable("delivery_notes");
+        modelBuilder.Entity<DeliveryNoteItem>().ToTable("delivery_note_items");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.Id).HasColumnName("id");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.DeliveryNoteNumber).HasColumnName("delivery_note_number");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.ParentGroupId).HasColumnName("parent_group_id");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.BranchId).HasColumnName("branch_id");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.DeliveryDate).HasColumnName("delivery_date");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.Notes).HasColumnName("notes");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.Status).HasColumnName("status");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.Id).HasColumnName("id");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.DeliveryNoteId).HasColumnName("delivery_note_id");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.ProductId).HasColumnName("product_id");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.ItemName).HasColumnName("item_name");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.Quantity).HasColumnName("quantity");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.CreatedAt).HasColumnName("created_at");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.CreatedBy).HasColumnName("created_by");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.IsDeleted).HasColumnName("is_deleted");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        modelBuilder.Entity<DeliveryNote>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.CreatedAt).HasColumnName("created_at");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.CreatedBy).HasColumnName("created_by");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.IsDeleted).HasColumnName("is_deleted");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        modelBuilder.Entity<DeliveryNoteItem>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
         modelBuilder.Entity<Statement>().ToTable("statements");
         modelBuilder.Entity<StatementLine>().ToTable("statement_lines");
         modelBuilder.Entity<CompanyProfile>().ToTable("company_profiles");
@@ -133,4 +163,5 @@ public class SalesDbContext : DbContext, IUnitOfWork
         }
         return result.ToString();
     }
+
 }

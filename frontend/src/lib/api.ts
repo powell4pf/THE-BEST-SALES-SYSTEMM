@@ -3,6 +3,7 @@ import type {
   AccountsReceivableAgingDto,
   ReportTableDto,
   CreateCreditNoteRequest,
+  CreateDeliveryNoteRequest,
   CreateInvoiceRequest,
   CreateParentGroupRequest,
   CreateProductRequest,
@@ -11,6 +12,8 @@ import type {
   InvoiceDto,
   CreditNoteDetailsDto,
   CreditNoteListItemDto,
+  DeliveryNoteDetailsDto,
+  DeliveryNoteListItemDto,
   LoginRequest,
   RegisterRequest,
   ParentGroupDetailsDto,
@@ -245,6 +248,25 @@ export const api = {
   },
   async deleteCreditNote(id: string): Promise<void> {
     await request<void>(`/api/v1/credit-notes/${id}`, { method: 'DELETE' });
+  },
+  async listDeliveryNotes(pageSize = 1000): Promise<PagedResult<DeliveryNoteListItemDto>> {
+    return request<PagedResult<DeliveryNoteListItemDto>>(`/api/v1/delivery-notes?page=1&pageSize=${pageSize}`);
+  },
+  async getDeliveryNote(id: string): Promise<DeliveryNoteDetailsDto> {
+    return request<DeliveryNoteDetailsDto>(`/api/v1/delivery-notes/${id}`);
+  },
+  async getNextDeliveryNoteNumber(): Promise<{ nextNumber: string }> {
+    return request<{ nextNumber: string }>('/api/v1/delivery-notes/next-number');
+  },
+  async createDeliveryNote(requestBody: CreateDeliveryNoteRequest): Promise<string> {
+    const response = await request<string | { id: string }>('/api/v1/delivery-notes', { method: 'POST', body: JSON.stringify(requestBody) });
+    return typeof response === 'string' ? response : response.id;
+  },
+  async updateDeliveryNote(id: string, requestBody: CreateDeliveryNoteRequest): Promise<void> {
+    await request<void>(`/api/v1/delivery-notes/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) });
+  },
+  async deleteDeliveryNote(id: string): Promise<void> {
+    await request<void>(`/api/v1/delivery-notes/${id}`, { method: 'DELETE' });
   },
   async generateStatement(params: { customerId: string; startDate: string; endDate: string }): Promise<import('./apiTypes').StatementDto> {
     return request<import('./apiTypes').StatementDto>(`/api/v1/statements/generate?customerId=${params.customerId}&startDate=${params.startDate}&endDate=${params.endDate}`);
