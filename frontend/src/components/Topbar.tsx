@@ -23,10 +23,15 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
     <header className="relative z-40 flex items-center justify-between gap-3 rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-4 py-3 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 lg:flex-row lg:px-6 lg:py-4">
       <div className="flex min-w-0 items-center gap-3">
         <Button variant="outline" size="sm" className="h-10 w-10 shrink-0 rounded-xl px-0 lg:hidden" onClick={onOpenNavigation} aria-label="Open navigation menu"><Menu className="h-4 w-4" /></Button>
-        <div>
-        <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400 lg:text-xs lg:tracking-[0.35em]">Nurtured Choice</div>
-        <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950 dark:text-white lg:mt-2 lg:text-2xl">{pageTitle}</h1>
-        <p className="hidden text-sm text-slate-500 dark:text-slate-400 lg:mt-1 lg:block">Signed in as {userName}</p>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:flex dark:border-white/10 dark:bg-white/95">
+            <img src="/icons/client-logo-source.png" alt="Nurtured Choice Products logo" className="h-full w-full object-contain" />
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-[#d94d40] sm:text-xs sm:tracking-[0.28em]">Nurtured Choice Products</div>
+            <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950 dark:text-white lg:mt-1 lg:text-2xl">{pageTitle}</h1>
+            <p className="hidden text-sm text-slate-500 dark:text-slate-400 lg:mt-1 lg:block">Signed in as {userName}</p>
+          </div>
         </div>
       </div>
 

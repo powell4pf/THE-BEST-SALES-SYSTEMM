@@ -37,9 +37,12 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
   return (
     <aside className={cn('sidebar-panel flex h-full flex-col gap-6 p-4', collapsed && 'collapsed', className)}>
       <div className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/6 p-4 backdrop-blur-xl">
-        <div className="min-w-0">
-          <div className="text-xs uppercase tracking-[0.35em] text-slate-400">Nurtured Choice</div>
-          <div className="mt-1 text-lg font-semibold text-white">Sales System</div>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1"><img src="/icons/client-logo-source.png" alt="Nurtured Choice Products logo" className="h-full w-full object-contain" /></div>
+          {!collapsed && <div className="min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f06a5c]">Nurtured Choice</div>
+            <div className="mt-1 text-sm font-semibold leading-tight text-white">Products Sales System</div>
+          </div>}
         </div>
         <Button variant="glass" size="sm" onClick={onToggleCollapsed}>
           {collapsed ? '>' : '<'}
