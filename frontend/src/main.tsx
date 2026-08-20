@@ -44,7 +44,10 @@ const queryClient = new QueryClient({
   }
 });
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+// Google OAuth client IDs are public identifiers. Keep a local fallback so a
+// missing runtime env file never removes the sign-in button from the UI.
+const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)
+  || '105408819867-ng27fm94t4t03evofv5lf2bs7717f3ab.apps.googleusercontent.com';
 
 const application = (
   <Router>
@@ -54,9 +57,7 @@ const application = (
   </Router>
 );
 
-const authenticatedApplication = googleClientId
-  ? <GoogleOAuthProvider clientId={googleClientId}>{application}</GoogleOAuthProvider>
-  : application;
+const authenticatedApplication = <GoogleOAuthProvider clientId={googleClientId}>{application}</GoogleOAuthProvider>;
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
