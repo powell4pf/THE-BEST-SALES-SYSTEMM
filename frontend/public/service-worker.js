@@ -1,7 +1,7 @@
-const CACHE_NAME = 'nurtured-choice-shell-v4';
+const CACHE_NAME = 'nurtured-choice-shell-v5';
 const CACHE_PREFIX = 'nurtured-choice-shell-';
 
-self.addEventListener('install', () => {});
+self.addEventListener('install', (event) => event.waitUntil(self.skipWaiting()));
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
