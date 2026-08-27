@@ -124,11 +124,23 @@ public sealed class DashboardService : IDashboardService
     {
         var invoices = await _db.Invoices.AsNoTracking()
             .Where(x => !x.IsDeleted && x.Status != InvoiceStatus.Cancelled)
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.InvoiceDate)
+            // Team Pulse is showing the date printed on the invoice. Do not
+            // use the audit timestamp here: older records can have a missing
+            // or default CreatedAt value, which renders as 1 Jan in the UI.
+            .OrderByDescending(x => x.InvoiceDate)
+            .ThenByDescending(x => x.CreatedAt)
             .Take(10)
-            .Select(x => new RecentActivityItemDto("Invoice", $"Invoice {x.InvoiceNumber} created", x.CreatedAt, x.InvoiceNumber))
+            .Select(x => new { x.InvoiceNumber, x.InvoiceDate })
             .ToListAsync(ct);
-        return invoices;
+
+        return invoices
+            .Select(x => new RecentActivityItemDto(
+                "Invoice",
+                $"Invoice {x.InvoiceNumber} created",
+                // Serialize the date as midnight UTC so the browser cannot
+                // shift the displayed day based on its local timezone.
+                x.InvoiceDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+                x.InvoiceNumber))
+            .ToList();
     }
 }
