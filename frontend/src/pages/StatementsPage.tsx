@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Printer } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
 import type { StatementDto } from '../lib/apiTypes';
-import { openStatementPrintWindow } from '../lib/print';
+import { downloadStatementPdf, openStatementPrintWindow } from '../lib/print';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -29,6 +29,8 @@ export function StatementsPage() {
   const [customerId, setCustomerId] = useState('');
   const [startDate, setStartDate] = useState(firstDayOfMonth());
   const [endDate, setEndDate] = useState(today());
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
 
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: () => api.listCustomers() });
   const customers = useMemo(() => customersQuery.data?.items ?? [], [customersQuery.data]);
@@ -42,6 +44,19 @@ export function StatementsPage() {
   const invoiceTotal = invoiceRows.reduce((sum, transaction) => sum + transaction.debit, 0);
 
   const handleGenerate = () => generateStatement.mutate({ customerId, startDate, endDate });
+
+  const handleDownload = async () => {
+    if (!statement || isDownloading) return;
+    setIsDownloading(true);
+    setDownloadError('');
+    try {
+      await downloadStatementPdf(statement);
+    } catch {
+      setDownloadError('The statement could not be downloaded. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.6fr_1.4fr]">
@@ -87,11 +102,19 @@ export function StatementsPage() {
                   For the period: {statementDate(statement.startDate)} to {statementDate(statement.endDate)}
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => openStatementPrintWindow(statement)}>
-                <Printer className="h-4 w-4" />
-                Print
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => openStatementPrintWindow(statement)}>
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleDownload} disabled={isDownloading}>
+                  <Download className="h-4 w-4" />
+                  {isDownloading ? 'Preparing...' : 'Download'}
+                </Button>
+              </div>
             </div>
+
+            {downloadError && <p className="mt-3 text-right text-sm text-rose-600 dark:text-rose-300">{downloadError}</p>}
 
             <div className="mt-6 overflow-x-auto">
               <table className="w-full text-sm">

@@ -41,6 +41,133 @@ export type StatementForPrint = {
   transactions: Array<{ date: string; document: string; description: string; debit: number; credit: number; balance: number }>;
 };
 
+function safeFilename(value: string) {
+  return value.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'statement';
+}
+
+async function loadLetterheadDataUrl() {
+  try {
+    const response = await fetch(LETTERHEAD_URL, { cache: 'force-cache' });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Unable to read the company letterhead.'));
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Download the same customer-facing statement as a self-contained PDF. */
+export async function downloadStatementPdf(statement: StatementForPrint): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 18;
+  const contentWidth = pageWidth - margin * 2;
+  const letterhead = await loadLetterheadDataUrl();
+  const contentStart = letterhead ? 61 : 36;
+  const today = new Intl.DateTimeFormat('en-GB').format(new Date());
+  const period = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' })
+    .format(new Date(`${statement.startDate}T00:00:00`)).toUpperCase();
+  const money = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
+  const lines = statement.transactions.filter((transaction) => transaction.document !== 'OPENING' && transaction.debit > 0);
+  const total = lines.reduce((sum, transaction) => sum + transaction.debit, 0);
+
+  const drawPage = () => {
+    if (letterhead) {
+      pdf.addImage(letterhead, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+    } else {
+      pdf.setFillColor(15, 23, 42);
+      pdf.rect(0, 0, pageWidth, 28, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(15);
+      pdf.text('NURTURED CHOICE PRODUCTS', margin, 13);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.text('Sales & Distribution', margin, 19);
+    }
+  };
+
+  drawPage();
+  let y = contentStart;
+  pdf.setTextColor(17, 24, 39);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.text('Dear sir/Madam,', margin, y);
+  y += 8;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(statement.customerName.toUpperCase(), margin, y);
+  y += 8;
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`DATE. ${today}`, margin, y);
+  y += 6;
+  pdf.text('Att: Account payables', margin, y);
+  y += 13;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(14);
+  pdf.text(`ACCOUNT STATEMENT FOR ${period}.`, margin, y);
+  y += 10;
+
+  const columns = [margin, margin + 34, margin + 72, pageWidth - margin];
+  const drawTableHeader = () => {
+    pdf.setDrawColor(17, 24, 39);
+    pdf.line(margin, y - 4, pageWidth - margin, y - 4);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.text('DATE', columns[0], y);
+    pdf.text('INVOICE.NO', columns[1], y);
+    pdf.text('BRANCH', columns[2], y);
+    pdf.text('AMOUNT', columns[3], y, { align: 'right' });
+    pdf.line(margin, y + 3, pageWidth - margin, y + 3);
+    y += 9;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+  };
+  drawTableHeader();
+
+  lines.forEach((transaction) => {
+    if (y > pageHeight - 28) {
+      pdf.addPage();
+      drawPage();
+      y = contentStart;
+      drawTableHeader();
+    }
+    pdf.text(new Intl.DateTimeFormat('en-GB').format(new Date(`${transaction.date}T00:00:00`)), columns[0], y);
+    pdf.text(transaction.document || '-', columns[1], y);
+    pdf.text(pdf.splitTextToSize(transaction.description || '-', 55), columns[2], y);
+    pdf.text(money.format(transaction.debit), columns[3], y, { align: 'right' });
+    pdf.setDrawColor(203, 213, 225);
+    pdf.line(margin, y + 3, pageWidth - margin, y + 3);
+    y += 8;
+  });
+
+  if (y > pageHeight - 48) {
+    pdf.addPage();
+    drawPage();
+    y = contentStart;
+  }
+  pdf.setDrawColor(17, 24, 39);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 8;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('TOTAL', margin, y);
+  pdf.text(money.format(total), columns[3], y, { align: 'right' });
+  y += 22;
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Thanks in advance.', margin, y);
+  y += 18;
+  pdf.text('Priscilla Nzalu', margin, y);
+
+  const filename = `Statement-${safeFilename(statement.customerName)}-${statement.startDate}-to-${statement.endDate}.pdf`;
+  pdf.save(filename);
+}
+
 function escapePrintHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character);
 }
