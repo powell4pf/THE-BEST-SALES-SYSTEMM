@@ -350,6 +350,24 @@ a {
 
   .animate-fade-in { animation-duration: 260ms; }
 
+  .dashboard-period > div:first-child { padding-bottom: 0.1rem; }
+  .dashboard-period .eyebrow { font-size: 0.6rem; }
+  .dashboard-period p { max-width: 30rem; font-size: 0.75rem; line-height: 1.35rem; }
+  .dashboard-period > div:last-child { gap: 0.5rem; }
+  .dashboard-period > div:last-child select,
+  .dashboard-period > div:last-child input { min-width: 0; height: 2.65rem; }
+
+  .mobile-stat-card { padding: 0.8rem; }
+  .mobile-stat-card .text-3xl { margin-top: 0.5rem; font-size: 1.35rem; line-height: 1.1; }
+  .mobile-stat-card .rounded-2xl { padding: 0.55rem; }
+  .mobile-stat-card > div:last-child { margin-top: 0.65rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-quick-action { min-height: 4.25rem; }
+
+  .dashboard-hero .grid.grid-cols-2 { gap: 0.5rem; }
+  .dashboard-hero .grid.grid-cols-2 > div { padding: 0.7rem; }
+  .dashboard-hero .grid.grid-cols-2 > div > div:first-child { font-size: 0.58rem; line-height: 0.85rem; }
+  .dashboard-hero .grid.grid-cols-2 > div > div:last-child { margin-top: 0.35rem; font-size: 1.15rem; }
+
   .mobile-sidebar {
     position: absolute;
     right: 0;

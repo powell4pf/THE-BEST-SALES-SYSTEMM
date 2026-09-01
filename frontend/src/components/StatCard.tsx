@@ -12,7 +12,7 @@ const accentMap: Record<string, string> = {
 
 export function StatCard({ label, value, delta, accent }: StatCardData) {
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="mobile-stat-card relative overflow-hidden">
       <div className={cn('absolute inset-x-0 top-0 h-1 bg-gradient-to-r', accentMap[accent] ?? 'from-slate-500 to-slate-300')} />
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -29,4 +29,3 @@ export function StatCard({ label, value, delta, accent }: StatCardData) {
     </Card>
   );
 }
-
