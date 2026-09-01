@@ -19,9 +19,9 @@ export function MobileBottomNav({ currentPath, onNavigate, onOpenMore }: Props) 
     <nav className="mobile-bottom-nav lg:hidden" aria-label="Primary navigation">
       {items.map(({ label, path, icon: Icon }) => {
         const active = currentPath === path;
-        return <button key={path} onClick={() => onNavigate(path)} className={cn('mobile-nav-item', active && 'mobile-nav-item-active')} aria-current={active ? 'page' : undefined}><Icon className="h-5 w-5" /><span>{label}</span></button>;
+        return <button key={path} onClick={() => onNavigate(path)} className={cn('mobile-nav-item', active && 'mobile-nav-item-active')} aria-current={active ? 'page' : undefined}><span className="mobile-nav-icon"><Icon className="h-[18px] w-[18px]" /></span><span>{label}</span></button>;
       })}
-      <button onClick={onOpenMore} className="mobile-nav-item"><Menu className="h-5 w-5" /><span>More</span></button>
+      <button onClick={onOpenMore} className="mobile-nav-item"><span className="mobile-nav-icon"><Menu className="h-[18px] w-[18px]" /></span><span>More</span></button>
     </nav>
   );
 }

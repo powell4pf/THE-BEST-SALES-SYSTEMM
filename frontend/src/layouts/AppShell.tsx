@@ -88,7 +88,7 @@ export function AppShell({ children }: Props) {
     <div className="app-bg min-h-screen text-slate-950 dark:text-white">
       <div className={`mx-auto grid min-h-screen max-w-[100rem] gap-4 p-3 pb-24 transition-[grid-template-columns] duration-300 ease-in-out sm:gap-6 sm:p-4 sm:pb-24 lg:p-6 lg:pb-6 ${collapsed ? 'lg:grid-cols-[88px_1fr]' : 'lg:grid-cols-[280px_1fr]'}`}>
         <Sidebar currentPath={location.pathname} onNavigate={navigate} collapsed={collapsed} onToggleCollapsed={() => setCollapsed((value) => !value)} className="hidden transition-all duration-300 ease-in-out lg:flex" />
-        <main className="flex min-w-0 flex-col gap-6">
+        <main className="flex min-w-0 flex-col gap-4 sm:gap-6">
           <Topbar
             theme={theme}
             onToggleTheme={() => setTheme((value) => (value === 'dark' ? 'light' : 'dark'))}

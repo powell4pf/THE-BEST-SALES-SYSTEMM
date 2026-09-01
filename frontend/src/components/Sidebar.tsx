@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, ClipboardCheck, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins } from 'lucide-react';
+import { BarChart3, Boxes, ClipboardCheck, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Button } from './ui/button';
 import { useQuery } from '@tanstack/react-query';
@@ -44,8 +44,8 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
             <div className="mt-1 text-sm font-semibold leading-tight text-white">Products Sales System</div>
           </div>}
         </div>
-        <Button variant="glass" size="sm" onClick={onToggleCollapsed}>
-          {collapsed ? '>' : '<'}
+        <Button variant="glass" size="sm" className="h-9 w-9 rounded-xl px-0 text-lg" onClick={onToggleCollapsed} aria-label={onClose ? 'Close navigation menu' : collapsed ? 'Expand navigation' : 'Collapse navigation'}>
+          {onClose ? <X className="h-4 w-4" /> : collapsed ? '›' : '‹'}
         </Button>
       </div>
 

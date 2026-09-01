@@ -20,15 +20,15 @@ type Props = {
 
 export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, onRefresh, onLogout, searchValue, userName, onOpenNavigation, pageTitle }: Props) {
   return (
-    <header className="relative z-40 flex items-center justify-between gap-3 rounded-[1.5rem] border border-slate-200/70 bg-white/80 px-4 py-3 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 lg:flex-row lg:px-6 lg:py-4">
+    <header className="sticky top-2 z-40 flex items-center justify-between gap-2 rounded-[1.25rem] border border-slate-200/70 bg-white/90 px-3 py-2.5 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 sm:gap-3 sm:rounded-[1.5rem] sm:px-4 sm:py-3 lg:relative lg:top-0 lg:flex-row lg:px-6 lg:py-4">
       <div className="flex min-w-0 items-center gap-3">
         <Button variant="outline" size="sm" className="h-10 w-10 shrink-0 rounded-xl px-0 lg:hidden" onClick={onOpenNavigation} aria-label="Open navigation menu"><Menu className="h-4 w-4" /></Button>
         <div className="flex min-w-0 items-center gap-3">
-          <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:flex dark:border-white/10 dark:bg-white/95">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:h-11 sm:w-11 dark:border-white/10 dark:bg-white/95">
             <img src="/icons/client-logo-source.png" alt="Nurtured Choice Products logo" className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-[#d94d40] sm:text-xs sm:tracking-[0.28em]">Nurtured Choice Products</div>
+            <div className="mobile-brand-label truncate text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94d40] sm:text-xs sm:tracking-[0.28em]">Nurtured Choice Products</div>
             <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950 dark:text-white lg:mt-1 lg:text-2xl">{pageTitle}</h1>
             <p className="hidden text-sm text-slate-500 dark:text-slate-400 lg:mt-1 lg:block">Signed in as {userName}</p>
           </div>
@@ -63,9 +63,9 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
           </Button>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1 lg:hidden">
-        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onOpenPalette} aria-label="Search"><Search className="h-4 w-4" /></Button>
-        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onRefresh} aria-label="Refresh"><RefreshCw className="h-4 w-4" /></Button>
+      <div className="flex shrink-0 items-center gap-0.5 lg:hidden">
+        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onOpenPalette} aria-label="Search"><Search className="h-[18px] w-[18px]" /></Button>
+        <Button variant="ghost" size="sm" className="hidden h-10 w-10 rounded-xl px-0 sm:inline-flex" onClick={onRefresh} aria-label="Refresh"><RefreshCw className="h-4 w-4" /></Button>
         <NotificationsMenu />
         <ThemeToggle mode={theme} onToggle={onToggleTheme} />
       </div>
