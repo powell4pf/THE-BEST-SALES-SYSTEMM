@@ -4,7 +4,7 @@ namespace NurturedChoice.Application.Abstractions;
 
 public interface IAuthService
 {
-    Task<AuthResponse> SignInWithGoogleAsync(GoogleSignInRequest request, string? ipAddress, CancellationToken cancellationToken = default);
+    Task<AuthResponse?> SignInWithGoogleAsync(GoogleSignInRequest request, string? ipAddress, CancellationToken cancellationToken = default);
 
     Task<AuthResponse?> SignInWithPasswordAsync(LoginRequest request, string? ipAddress, CancellationToken cancellationToken = default);
 

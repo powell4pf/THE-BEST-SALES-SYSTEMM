@@ -23,7 +23,7 @@ public sealed class AuthService : IAuthService
         _passwordHasher = passwordHasher;
     }
 
-    public async Task<AuthResponse> SignInWithGoogleAsync(GoogleSignInRequest request, string? ipAddress, CancellationToken cancellationToken = default)
+    public async Task<AuthResponse?> SignInWithGoogleAsync(GoogleSignInRequest request, string? ipAddress, CancellationToken cancellationToken = default)
     {
         var identity = await _googleTokens.ValidateAsync(request.IdToken, cancellationToken);
         var user = await _db.AppUsers.FirstOrDefaultAsync(
@@ -45,6 +45,7 @@ public sealed class AuthService : IAuthService
         }
         else
         {
+            if (user.Status != RecordStatus.Active) return null;
             if (!string.Equals(user.GoogleSubject, identity.Subject, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(user.GoogleSubject))
             {
                 throw new InvalidOperationException("Google account does not match the linked user.");
@@ -77,7 +78,7 @@ public sealed class AuthService : IAuthService
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await _db.AppUsers.FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
-        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash) || !_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password))
+        if (user is null || user.Status != RecordStatus.Active || string.IsNullOrWhiteSpace(user.PasswordHash) || !_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password))
         {
             return null;
         }
@@ -144,6 +145,7 @@ public sealed class AuthService : IAuthService
         }
 
         var user = await _db.AppUsers.FirstAsync(x => x.Id == token.AppUserId, cancellationToken);
+        if (user.Status != RecordStatus.Active) return null;
         var roles = await ResolveRolesAsync(user, null, cancellationToken);
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var nextRefreshToken = _tokens.CreateRefreshToken();

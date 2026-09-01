@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.DTOs.Auth;
 
 namespace NurturedChoice.Api.Controllers;
 
 [ApiController]
+[EnableRateLimiting("auth")]
 [Route("api/v1/[controller]")]
 public sealed class AuthController : ControllerBase
 {
@@ -19,7 +21,7 @@ public sealed class AuthController : ControllerBase
     public async Task<ActionResult<AuthResponse>> GoogleSignIn([FromBody] GoogleSignInRequest request, CancellationToken cancellationToken)
     {
         var result = await _authService.SignInWithGoogleAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
-        return Ok(result);
+        return result is null ? Unauthorized() : Ok(result);
     }
 
     [HttpPost("login")]

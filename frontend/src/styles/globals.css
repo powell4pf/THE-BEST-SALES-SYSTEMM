@@ -343,6 +343,20 @@ a {
 
   .mobile-brand-label { max-width: 9rem; }
 
+  .notification-popover {
+    position: fixed;
+    top: 4.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    max-height: calc(100dvh - 6rem);
+    border-radius: 1.25rem;
+  }
+  .notification-popover > div:first-child { align-items: flex-start; gap: 0.5rem; }
+  .notification-popover > div:first-child > div { min-width: 0; }
+  .notification-popover > div:first-child p { line-height: 1.1rem; }
+  .notification-popover > div:nth-child(2) { max-height: calc(100dvh - 11rem); }
+
   .app-bg { padding-bottom: env(safe-area-inset-bottom); }
 
   button { min-height: 2.75rem; }
