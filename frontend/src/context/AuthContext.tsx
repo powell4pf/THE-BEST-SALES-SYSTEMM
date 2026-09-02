@@ -68,3 +68,7 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
+
+export function hasFullAdministrativeAccess(roles: string[]) {
+  return roles.some((role) => role === 'Super Administrator' || role === 'Administrator' || role === 'CEO');
+}

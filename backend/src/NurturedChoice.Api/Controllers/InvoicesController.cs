@@ -58,7 +58,7 @@ public sealed class InvoicesController : ControllerBase
             });
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:guid}"), Permission("invoices.delete")]
     [Permission("invoices.manage")]
     public async Task<IActionResult> DeleteInvoice(Guid id, CancellationToken cancellationToken)
         => await _invoiceService.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();

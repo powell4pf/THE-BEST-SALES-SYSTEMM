@@ -9,6 +9,7 @@ import { Field } from '../components/Modal';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
 import type { CompanyProfileDto, InvoiceNumberSettingsDto, SystemSettingDto, UserRoleDto } from '../lib/apiTypes';
+import { useAuth } from '../context/AuthContext';
 
 const companyProfileSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -35,7 +36,11 @@ function toFormValues(profile: CompanyProfileDto): CompanyProfileFormValues {
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceNumberSettingsDto | null>(null);
+  const [roleMessage, setRoleMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const auth = useAuth();
+  const isSuperAdministrator = auth.user?.roles.includes('Super Administrator') ?? false;
+  const roleOptions = ['Viewer', 'Tester', 'Sales', 'Accounts', 'Warehouse', 'Administrator', 'CEO', 'Super Administrator'];
 
   const profileQuery = useQuery({
     queryKey: ['companyProfile'],
@@ -71,6 +76,14 @@ export function SettingsPage() {
   };
 
   const saveInvoiceSettings = useMutation({ mutationFn: () => api.updateInvoiceNumberSettings(invoiceSettings as InvoiceNumberSettingsDto), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoiceNumberSettings'] }) });
+  const updateUserRole = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) => api.updateUserRole(id, { role }),
+    onSuccess: async () => {
+      setRoleMessage('User role updated immediately.');
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => setRoleMessage((error as Error).message || 'Unable to update that user role.')
+  });
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.5fr_1.5fr]">
@@ -127,7 +140,7 @@ export function SettingsPage() {
         {activeTab === 'numbering' && invoiceSettings && <div><div className="p-6"><h2 className="text-xl font-semibold">Invoice Numbering</h2><p className="mt-2 text-sm text-slate-500">Control invoice prefixes and numbering rules.</p></div><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="Prefix"><Input value={invoiceSettings.prefix} onChange={e => setInvoiceSettings({ ...invoiceSettings, prefix: e.target.value })} /></Field><Field label="Starting Number"><Input type="number" value={invoiceSettings.startingNumber} onChange={e => setInvoiceSettings({ ...invoiceSettings, startingNumber: Number(e.target.value) })} /></Field><Field label="Padding"><Input type="number" value={invoiceSettings.padding} onChange={e => setInvoiceSettings({ ...invoiceSettings, padding: Number(e.target.value) })} /></Field><Field label="Reset Policy"><select className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3" value={invoiceSettings.resetPolicy} onChange={e => setInvoiceSettings({ ...invoiceSettings, resetPolicy: e.target.value })}><option>Never</option><option>Yearly</option><option>Monthly</option></select></Field></div><div className="flex justify-end border-t p-6"><Button onClick={() => saveInvoiceSettings.mutate()} disabled={saveInvoiceSettings.isPending}>{saveInvoiceSettings.isPending ? 'Saving...' : 'Save Changes'}</Button></div></div>}
         {activeTab === 'numbering' && invoiceSettingsQuery.isLoading && <p className="p-6 text-sm text-slate-500">Loading invoice settings...</p>}
         {activeTab === 'system' && <div className="p-6"><h2 className="text-xl font-semibold">System Settings</h2><div className="mt-6 space-y-3">{(systemSettingsQuery.data ?? []).map(setting => <div key={setting.key} className="rounded-2xl border p-4"><div className="font-medium">{setting.key}</div><div className="text-sm text-slate-500">{setting.value}</div><div className="mt-1 text-xs text-slate-400">{setting.description}</div></div>)}</div></div>}
-        {activeTab === 'users' && <div className="p-6"><h2 className="text-xl font-semibold">Users & Roles</h2><div className="mt-6 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Name</th><th>Email</th><th>Roles</th></tr></thead><tbody>{(usersQuery.data ?? []).map(user => <tr key={user.id} className="border-b"><td className="py-3">{user.displayName}</td><td>{user.email}</td><td>{user.roles.join(', ')}</td></tr>)}</tbody></table>{usersQuery.error && <p className="mt-4 text-sm text-rose-600">{(usersQuery.error as Error).message}</p>}</div></div>}
+        {activeTab === 'users' && <div className="p-6"><h2 className="text-xl font-semibold">Users & Roles</h2><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Roles take effect immediately for new requests. Viewers and Testers can work with records but cannot delete them.</p>{roleMessage && <p className="mt-3 text-sm text-emerald-600">{roleMessage}</p>}<div className="mt-6 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Name</th><th>Email</th><th>Role</th></tr></thead><tbody>{(usersQuery.data ?? []).map(user => <tr key={user.id} className="border-b"><td className="py-3">{user.displayName}</td><td>{user.email}</td><td>{isSuperAdministrator ? <select className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-sm dark:border-white/10 dark:bg-slate-900" value={user.roles[0] ?? 'Viewer'} onChange={event => { setRoleMessage(null); updateUserRole.mutate({ id: user.id, role: event.target.value }); }} disabled={updateUserRole.isPending}><option value="">Select role</option>{roleOptions.map(role => <option key={role} value={role}>{role}</option>)}</select> : user.roles.join(', ')}</td></tr>)}</tbody></table>{usersQuery.error && <p className="mt-4 text-sm text-rose-600">{(usersQuery.error as Error).message}</p>}</div></div>}
       </Card>
     </div>
   );

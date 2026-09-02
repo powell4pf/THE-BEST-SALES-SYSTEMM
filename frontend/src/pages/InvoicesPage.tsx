@@ -16,6 +16,7 @@ import { api } from '../lib/api';
 import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto, PagedResult } from '../lib/apiTypes';
 import { openLetterheadPrintWindow } from '../lib/print';
 import { downloadInvoicePdf, shareInvoiceByEmail, shareInvoiceByWhatsApp, type InvoicePdfData } from '../lib/invoiceShare';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 const defaultInvoiceNote = 'Thank you for doing business with us.';
@@ -110,6 +111,8 @@ function toRequest(values: InvoiceFormValues): CreateInvoiceRequest {
 }
 
 export function InvoicesPage() {
+  const auth = useAuth();
+  const canDelete = hasFullAdministrativeAccess(auth.user?.roles ?? []);
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -232,10 +235,10 @@ export function InvoicesPage() {
             <Mail className="h-4 w-4" />
             Email
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteInvoice.isPending}>
+          {canDelete ? <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteInvoice.isPending}>
             <Trash2 className="h-4 w-4" />
             Delete
-          </Button>
+          </Button> : null}
         </div>
       )
     }

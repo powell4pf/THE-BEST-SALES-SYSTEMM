@@ -13,6 +13,7 @@ import { productSchema, type ProductFormValues } from '../lib/schemas';
 import { api } from '../lib/api';
 import type { CreateProductRequest, ProductDto } from '../lib/apiTypes';
 import { downloadCsv } from '../lib/exportCsv';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -67,6 +68,8 @@ const emptyValues = (): ProductFormValues => ({
 });
 
 export function ProductsPage() {
+  const auth = useAuth();
+  const canDelete = hasFullAdministrativeAccess(auth.user?.roles ?? []);
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -166,10 +169,10 @@ export function ProductsPage() {
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteProduct.isPending}>
+          {canDelete ? <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteProduct.isPending}>
             <Trash2 className="h-4 w-4" />
             Delete
-          </Button>
+          </Button> : null}
         </div>
       )
     }

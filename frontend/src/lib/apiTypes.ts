@@ -293,6 +293,7 @@ export type InvoiceNumberSettingsDto = { prefix: string; startingNumber: number;
 export type UpdateInvoiceNumberSettingsRequest = InvoiceNumberSettingsDto;
 export type SystemSettingDto = { key: string; value: string; description: string | null };
 export type UserRoleDto = { id: string; email: string; displayName: string; roles: string[] };
+export type UpdateUserRoleRequest = { role: string };
 export type MonthEndReminderDto = { id: string; periodKey: string; title: string; message: string; createdAt: string };
 export type NotificationDto = { id: string; documentType: string; documentId: string | null; title: string; message: string; route: string; createdAt: string; readAt: string | null };
 

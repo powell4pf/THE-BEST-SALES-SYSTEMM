@@ -13,18 +13,24 @@ public static class ReferenceDataSeeder
     [
         ("customers.view", "View Customers", "Can view parent groups and branches"),
         ("customers.manage", "Manage Customers", "Can create and edit customers"),
+        ("customers.delete", "Delete Customers", "Can delete customers"),
         ("products.view", "View Products", "Can view product catalog"),
         ("products.manage", "Manage Products", "Can create and edit products"),
+        ("products.delete", "Delete Products", "Can delete products"),
         ("stock.view", "View Stock", "Can view inventory data"),
         ("stock.manage", "Manage Stock", "Can adjust stock and movements"),
         ("invoices.view", "View Invoices", "Can view invoices"),
         ("invoices.manage", "Manage Invoices", "Can create and finalize invoices"),
+        ("invoices.delete", "Delete Invoices", "Can delete invoices"),
         ("statements.view", "View Statements", "Can view customer statements"),
         ("statements.manage", "Manage Statements", "Can generate statements"),
         ("creditnotes.view", "View Credit Notes", "Can view credit notes"),
         ("creditnotes.manage", "Manage Credit Notes", "Can create and issue credit notes"),
+        ("creditnotes.delete", "Delete Credit Notes", "Can delete credit notes"),
         ("deliverynotes.view", "View Delivery Notes", "Can view delivery notes"),
         ("deliverynotes.manage", "Manage Delivery Notes", "Can create and edit delivery notes"),
+        ("deliverynotes.delete", "Delete Delivery Notes", "Can delete delivery notes"),
+        ("payments.delete", "Delete Payments", "Can delete payments"),
         ("notifications.view", "View Notifications", "Can view document generation notifications"),
         ("reports.view", "View Reports", "Can view reports and dashboards"),
         ("settings.manage", "Manage Settings", "Can update company and system settings"),
@@ -34,10 +40,13 @@ public static class ReferenceDataSeeder
     private static readonly string[] Roles =
     [
         "Super Administrator",
+        "Administrator",
+        "CEO",
         "Sales",
         "Accounts",
         "Warehouse",
-        "Viewer"
+        "Viewer",
+        "Tester"
     ];
 
     public static async Task SeedReferenceDataAsync(this SalesDbContext db, IPasswordHashService passwordHasher, bool allowDemoAdmin, string? demoAdminPassword, CancellationToken cancellationToken = default)
@@ -52,6 +61,7 @@ public static class ReferenceDataSeeder
         {
             await SeedDemoUsersAsync(db, passwordHasher, demoAdminPassword, cancellationToken);
         }
+        await EnsureDesignatedOwnerRolesAsync(db, cancellationToken);
     }
 
     private static async Task SeedRolesAsync(SalesDbContext db, CancellationToken cancellationToken)
@@ -91,28 +101,52 @@ public static class ReferenceDataSeeder
         var roleMap = await db.AppRoles.ToDictionaryAsync(x => x.Name, x => x.Id, cancellationToken);
         var permissionMap = await db.AppPermissions.ToDictionaryAsync(x => x.Key, x => x.Id, cancellationToken);
 
-        var superAdminId = roleMap.GetValueOrDefault("Super Administrator");
+        var fullAccessRoleIds = roleMap
+            .Where(entry => entry.Key is "Super Administrator" or "Administrator" or "CEO")
+            .Select(entry => entry.Value)
+            .Where(id => id != Guid.Empty)
+            .ToArray();
         var viewerId = roleMap.GetValueOrDefault("Viewer");
+        var testerId = roleMap.GetValueOrDefault("Tester");
         var salesId = roleMap.GetValueOrDefault("Sales");
         var accountsId = roleMap.GetValueOrDefault("Accounts");
         var warehouseId = roleMap.GetValueOrDefault("Warehouse");
 
-        if (superAdminId != Guid.Empty)
+        foreach (var roleId in fullAccessRoleIds)
         {
             foreach (var permissionId in permissionMap.Values)
             {
-                await AddRolePermissionAsync(db, superAdminId, permissionId, cancellationToken);
+                await AddRolePermissionAsync(db, roleId, permissionId, cancellationToken);
             }
         }
 
         // The application exposes invoice drafting to the standard signed-in
         // workspace user, so keep the visible Generate Invoice action usable
         // for existing Viewer accounts as well as Sales and Accounts users.
-        foreach (var permissionKey in new[] { "customers.view", "products.view", "stock.view", "invoices.view", "invoices.manage", "statements.view", "creditnotes.view", "reports.view" })
+        var nonDestructivePermissions = permissionMap.Keys
+            .Where(key => !key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) && key is not "users.manage" and not "settings.manage")
+            .ToArray();
+        var restrictedRoleIds = roleMap
+            .Where(entry => entry.Key is not "Super Administrator" and not "Administrator" and not "CEO")
+            .Select(entry => entry.Value)
+            .Where(id => id != Guid.Empty)
+            .ToArray();
+        var restrictedPermissionIds = permissionMap
+            .Where(entry => entry.Key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) || entry.Key is "users.manage" or "settings.manage")
+            .Select(entry => entry.Value)
+            .ToHashSet();
+        var staleDeleteLinks = await db.AppRolePermissions
+            .Where(link => restrictedRoleIds.Contains(link.AppRoleId) && restrictedPermissionIds.Contains(link.AppPermissionId))
+            .ToListAsync(cancellationToken);
+        db.AppRolePermissions.RemoveRange(staleDeleteLinks);
+        foreach (var permissionKey in nonDestructivePermissions)
         {
-            if (viewerId != Guid.Empty && permissionMap.TryGetValue(permissionKey, out var permissionId))
+            foreach (var roleId in new[] { viewerId, testerId }.Where(id => id != Guid.Empty))
             {
-                await AddRolePermissionAsync(db, viewerId, permissionId, cancellationToken);
+                if (permissionMap.TryGetValue(permissionKey, out var permissionId))
+                {
+                    await AddRolePermissionAsync(db, roleId, permissionId, cancellationToken);
+                }
             }
         }
 
@@ -140,16 +174,31 @@ public static class ReferenceDataSeeder
             }
         }
 
-        // This installation is intended for a trusted internal team. Every
-        // account must be able to operate the complete sales workspace, so
-        // apply the full permission catalogue to every seeded role. Keeping
-        // this in the idempotent seeder upgrades existing accounts as well as
-        // provisioning new deployments.
-        foreach (var roleId in roleMap.Values.Where(id => id != Guid.Empty).Distinct())
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task EnsureDesignatedOwnerRolesAsync(SalesDbContext db, CancellationToken cancellationToken)
+    {
+        var roleMap = await db.AppRoles
+            .Where(role => role.Name == "Super Administrator" || role.Name == "CEO")
+            .ToDictionaryAsync(role => role.Name, role => role.Id, cancellationToken);
+        var owners = new[]
         {
-            foreach (var permissionId in permissionMap.Values)
+            (Email: "powellmuuo@gmail.com", Role: "Super Administrator"),
+            (Email: "priscillayata@gmail.com", Role: "CEO")
+        };
+
+        foreach (var owner in owners)
+        {
+            if (!roleMap.TryGetValue(owner.Role, out var roleId)) continue;
+            var user = await db.AppUsers.FirstOrDefaultAsync(x => x.Email == owner.Email && x.Status == RecordStatus.Active, cancellationToken);
+            if (user is null) continue;
+
+            var existingRoles = await db.AppUserRoles.Where(link => link.AppUserId == user.Id).ToListAsync(cancellationToken);
+            db.AppUserRoles.RemoveRange(existingRoles.Where(link => link.AppRoleId != roleId));
+            if (existingRoles.All(link => link.AppRoleId != roleId))
             {
-                await AddRolePermissionAsync(db, roleId, permissionId, cancellationToken);
+                db.AppUserRoles.Add(new AppUserRole { AppUserId = user.Id, AppRoleId = roleId });
             }
         }
 

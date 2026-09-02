@@ -12,6 +12,7 @@ import type { BranchRow, CustomerRow, TableColumn } from '../lib/types';
 import { customerSchema, type CustomerFormValues } from '../lib/schemas';
 import { api } from '../lib/api';
 import type { CreateParentGroupRequest, ParentGroupDetailsDto } from '../lib/apiTypes';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -80,6 +81,8 @@ function toRequest(values: CustomerFormValues): CreateParentGroupRequest {
 }
 
 export function CustomersPage() {
+  const auth = useAuth();
+  const canDelete = hasFullAdministrativeAccess(auth.user?.roles ?? []);
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -178,10 +181,10 @@ export function CustomersPage() {
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteCustomer.isPending}>
+          {canDelete ? <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteCustomer.isPending}>
             <Trash2 className="h-4 w-4" />
             Delete
-          </Button>
+          </Button> : null}
         </div>
       )
     }

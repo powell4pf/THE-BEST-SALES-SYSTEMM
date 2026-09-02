@@ -15,6 +15,7 @@ import { api } from '../lib/api';
 import type { CreateDeliveryNoteRequest, DeliveryNoteListItemDto, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
 import type { TableColumn } from '../lib/types';
 import { openLetterheadPrintWindow } from '../lib/print';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 const itemSchema = z.object({ productId: z.string().min(1, 'Choose a product'), quantity: z.string().min(1, 'Quantity is required') });
 const deliveryNoteSchema = z.object({ deliveryNoteNumber: z.string().min(1, 'Delivery note number is required'), deliveryDate: z.string().min(1, 'Delivery date is required'), customerId: z.string().min(1, 'Choose a customer'), branchId: z.string().optional(), notes: z.string().optional(), items: z.array(itemSchema).min(1, 'Add at least one product') });
@@ -31,6 +32,8 @@ function toRequest(values: FormValues): CreateDeliveryNoteRequest {
 }
 
 export function DeliveryNotesPage() {
+  const auth = useAuth();
+  const canDelete = hasFullAdministrativeAccess(auth.user?.roles ?? []);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -77,7 +80,7 @@ export function DeliveryNotesPage() {
     { key: 'productCount', label: 'Products', align: 'right' },
     { key: 'totalQuantity', label: 'Quantity', align: 'right' },
     { key: 'status', label: 'Status', render: (row) => <span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-700 dark:text-sky-300">{row.status}</span> },
-    { key: 'id', label: 'Actions', align: 'right', render: (row) => <div className="flex justify-end gap-1"><Button size="sm" variant="ghost" onClick={() => handlePrint(row.id)} aria-label={`Print ${row.deliveryNoteNumber}`}><Printer className="h-4 w-4" /></Button><Button size="sm" variant="ghost" onClick={() => openEdit(row.id)} aria-label={`Edit ${row.deliveryNoteNumber}`}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="ghost" onClick={() => { if (window.confirm(`Delete ${row.deliveryNoteNumber}?`)) removeNote.mutate(row.id); }} aria-label={`Delete ${row.deliveryNoteNumber}`}><Trash2 className="h-4 w-4" /></Button></div> }
+    { key: 'id', label: 'Actions', align: 'right', render: (row) => <div className="flex justify-end gap-1"><Button size="sm" variant="ghost" onClick={() => handlePrint(row.id)} aria-label={`Print ${row.deliveryNoteNumber}`}><Printer className="h-4 w-4" /></Button><Button size="sm" variant="ghost" onClick={() => openEdit(row.id)} aria-label={`Edit ${row.deliveryNoteNumber}`}><Pencil className="h-4 w-4" /></Button>{canDelete ? <Button size="sm" variant="ghost" onClick={() => { if (window.confirm(`Delete ${row.deliveryNoteNumber}?`)) removeNote.mutate(row.id); }} aria-label={`Delete ${row.deliveryNoteNumber}`}><Trash2 className="h-4 w-4" /></Button> : null}</div> }
   ], [customers, removeNote]);
   const customerRegistration = form.register('customerId');
 

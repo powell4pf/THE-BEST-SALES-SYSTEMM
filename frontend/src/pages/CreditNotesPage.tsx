@@ -14,6 +14,7 @@ import { Select } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import type { CreateCreditNoteRequest, CreditNoteDetailsDto, CreditNoteListItemDto, InvoiceSummaryDto, ParentGroupSummaryDto, ProductSummaryDto } from '../lib/apiTypes';
 import { openLetterheadPrintWindow } from '../lib/print';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 const creditNoteItemSchema = z.object({
   id: z.string().optional(),
@@ -90,6 +91,8 @@ function toRequest(values: CreditNoteFormValues): CreateCreditNoteRequest {
 }
 
 export function CreditNotesPage() {
+  const auth = useAuth();
+  const canDelete = hasFullAdministrativeAccess(auth.user?.roles ?? []);
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -212,7 +215,7 @@ export function CreditNotesPage() {
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="outline" onClick={() => openEdit(row.id)}><Pencil className="h-4 w-4" />Edit</Button>
           <Button size="sm" variant="ghost" onClick={() => handlePrint(row.id)}><Printer className="h-4 w-4" />Print</Button>
-          <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteCreditNote.isPending}><Trash2 className="h-4 w-4" />Delete</Button>
+          {canDelete ? <Button size="sm" variant="ghost" onClick={() => handleDelete(row.id)} disabled={deleteCreditNote.isPending}><Trash2 className="h-4 w-4" />Delete</Button> : null}
         </div>
       )
     }

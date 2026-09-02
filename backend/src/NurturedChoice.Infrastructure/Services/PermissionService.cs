@@ -16,6 +16,6 @@ public sealed class PermissionService : IPermissionService
         return _db.AppUserRoles.AsNoTracking()
             .Where(userRole => userRole.AppUserId == userId.Value)
             .Join(_db.AppRoles.AsNoTracking(), userRole => userRole.AppRoleId, role => role.Id, (_, role) => role)
-            .AnyAsync(role => role.Name == "Super Administrator" || role.RolePermissions.Any(link => _db.AppPermissions.Any(permission => permission.Id == link.AppPermissionId && permission.Key == permissionKey)), cancellationToken);
+            .AnyAsync(role => (role.Name == "Super Administrator" || role.Name == "Administrator" || role.Name == "CEO") || role.RolePermissions.Any(link => _db.AppPermissions.Any(permission => permission.Id == link.AppPermissionId && permission.Key == permissionKey)), cancellationToken);
     }
 }

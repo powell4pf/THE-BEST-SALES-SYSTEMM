@@ -46,7 +46,7 @@ public sealed class ProductsController : ControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProductRequest request, CancellationToken cancellationToken)
         => await _service.UpdateAsync(id, request, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:guid}"), Permission("products.delete")]
     [Permission("products.manage")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         => await _service.DeleteAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
