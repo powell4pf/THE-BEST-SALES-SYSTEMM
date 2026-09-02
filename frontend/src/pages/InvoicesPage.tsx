@@ -210,10 +210,12 @@ export function InvoicesPage() {
               Finalize
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => openEdit(row.id)}>
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
+          {row.status === 'Draft' ? (
+            <Button size="sm" variant="outline" onClick={() => openEdit(row.id)}>
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          ) : null}
           <Button size="sm" variant="ghost" onClick={() => handlePrint(row.id)}>
             <Printer className="h-4 w-4" />
             Print

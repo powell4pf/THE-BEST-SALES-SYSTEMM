@@ -45,7 +45,18 @@ public sealed class InvoicesController : ControllerBase
     [HttpPut("{id:guid}")]
     [Permission("invoices.manage")]
     public async Task<IActionResult> UpdateInvoice(Guid id, [FromBody] CreateInvoiceRequest request, CancellationToken cancellationToken)
-        => await _invoiceService.UpdateAsync(id, request, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+    {
+        if (await _invoiceService.UpdateAsync(id, request, _currentUser.UserId, cancellationToken)) return NoContent();
+
+        var invoice = await _invoiceService.GetByIdAsync(id, cancellationToken);
+        return invoice is null
+            ? NotFound()
+            : Conflict(new ProblemDetails
+            {
+                Title = "Invoice cannot be edited",
+                Detail = "Only draft invoices can be edited. Finalized invoices are read-only."
+            });
+    }
 
     [HttpDelete("{id:guid}")]
     [Permission("invoices.manage")]
