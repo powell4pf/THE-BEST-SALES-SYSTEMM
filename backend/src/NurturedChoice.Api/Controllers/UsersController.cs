@@ -35,6 +35,20 @@ public sealed class UsersController : ControllerBase
         {
             return BadRequest(new ProblemDetails { Title = "Super Administrator protection", Detail = "The active Super Administrator cannot remove that role from their own account." });
         }
+        if (role.Name != "Super Administrator")
+        {
+            var currentTargetIsSuperAdministrator = await _db.AppUserRoles
+                .Where(link => link.AppUserId == id)
+                .Join(_db.AppRoles, link => link.AppRoleId, existingRole => existingRole.Id, (_, existingRole) => existingRole.Name)
+                .AnyAsync(name => name == "Super Administrator", cancellationToken);
+            var superAdministratorCount = await _db.AppUserRoles
+                .Join(_db.AppRoles, link => link.AppRoleId, existingRole => existingRole.Id, (_, existingRole) => existingRole.Name)
+                .CountAsync(name => name == "Super Administrator", cancellationToken);
+            if (currentTargetIsSuperAdministrator && superAdministratorCount <= 1)
+            {
+                return BadRequest(new ProblemDetails { Title = "Super Administrator protection", Detail = "At least one Super Administrator must remain assigned to the system." });
+            }
+        }
 
         var user = await _db.AppUsers.FirstOrDefaultAsync(x => x.Id == id && x.Status == RecordStatus.Active, cancellationToken);
         if (user is null) return NotFound();

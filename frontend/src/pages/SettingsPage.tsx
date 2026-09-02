@@ -39,7 +39,6 @@ export function SettingsPage() {
   const [roleMessage, setRoleMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const isSuperAdministrator = auth.user?.roles.includes('Super Administrator') ?? false;
   const roleOptions = ['Viewer', 'Tester', 'Sales', 'Accounts', 'Warehouse', 'Administrator', 'CEO', 'Super Administrator'];
 
   const profileQuery = useQuery({
@@ -49,6 +48,8 @@ export function SettingsPage() {
   const invoiceSettingsQuery = useQuery({ queryKey: ['invoiceNumberSettings'], queryFn: api.getInvoiceNumberSettings, enabled: activeTab === 'numbering' });
   const systemSettingsQuery = useQuery<SystemSettingDto[]>({ queryKey: ['systemSettings'], queryFn: api.getSystemSettings, enabled: activeTab === 'system' });
   const usersQuery = useQuery<UserRoleDto[]>({ queryKey: ['users'], queryFn: api.listUsers, enabled: activeTab === 'users' });
+  const directoryUser = usersQuery.data?.find((user) => user.id === auth.user?.id || user.email.toLowerCase() === auth.user?.email.toLowerCase());
+  const isSuperAdministrator = auth.user?.roles.includes('Super Administrator') || directoryUser?.roles.includes('Super Administrator') || false;
 
   const form = useForm<CompanyProfileFormValues>({
     resolver: zodResolver(companyProfileSchema)
