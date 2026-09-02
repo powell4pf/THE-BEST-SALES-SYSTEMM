@@ -47,7 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const tokens = loadAuthTokens();
     if (tokens?.accessToken && !isJwtExpired(tokens.accessToken)) {
       setToken(tokens.accessToken);
-      setUser(loadStoredUser() ?? (() => { const payload = decodeJwt(tokens.accessToken); return payload?.sub && payload.email ? { id: payload.sub, email: payload.email, displayName: payload.name ?? payload.email, roles: [] } : null; })());
+      const storedUser = loadStoredUser() ?? (() => { const payload = decodeJwt(tokens.accessToken); return payload?.sub && payload.email ? { id: payload.sub, email: payload.email, displayName: payload.name ?? payload.email, roles: [] } : null; })();
+      setUser(storedUser);
+      void api.getCurrentUser().then((currentUser) => {
+        const refreshedUser = { id: currentUser.userId, email: currentUser.email, displayName: currentUser.displayName, roles: currentUser.roles };
+        window.localStorage.setItem(USER_KEY, JSON.stringify(refreshedUser));
+        setUser(refreshedUser);
+      }).catch(() => undefined);
     } else {
       clearSession();
     }

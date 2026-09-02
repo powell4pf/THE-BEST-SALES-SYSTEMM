@@ -302,6 +302,7 @@ export const api = {
   async listNotifications(): Promise<import('./apiTypes').NotificationDto[]> { return request('/api/v1/notifications'); },
   async markNotificationRead(id: string): Promise<void> { await request(`/api/v1/notifications/${id}/read`, { method: 'POST' }); },
   async markAllNotificationsRead(): Promise<void> { await request('/api/v1/notifications/read-all', { method: 'POST' }); },
+  async getCurrentUser(): Promise<{ userId: string; email: string; displayName: string; roles: string[] }> { return request('/api/v1/auth/me'); },
   async getInvoice(id: string): Promise<InvoiceDto> {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);
   },

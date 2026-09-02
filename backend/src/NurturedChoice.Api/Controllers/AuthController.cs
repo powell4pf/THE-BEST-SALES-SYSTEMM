@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.DTOs.Auth;
+using NurturedChoice.Infrastructure.Persistence;
 
 namespace NurturedChoice.Api.Controllers;
 
@@ -11,10 +14,14 @@ namespace NurturedChoice.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly SalesDbContext _db;
+    private readonly ICurrentUserService _currentUser;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, SalesDbContext db, ICurrentUserService currentUser)
     {
         _authService = authService;
+        _db = db;
+        _currentUser = currentUser;
     }
 
     [HttpPost("google")]
@@ -55,5 +62,18 @@ public sealed class AuthController : ControllerBase
     {
         await _authService.LogoutAsync(refreshToken, cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("me"), Authorize]
+    public async Task<IActionResult> Me(CancellationToken cancellationToken)
+    {
+        if (_currentUser.UserId is null) return Unauthorized();
+        var user = await _db.AppUsers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == _currentUser.UserId.Value && x.Status == NurturedChoice.Domain.Enums.RecordStatus.Active, cancellationToken);
+        if (user is null) return Unauthorized();
+        var roles = await _db.AppUserRoles
+            .Where(link => link.AppUserId == user.Id)
+            .Join(_db.AppRoles, link => link.AppRoleId, role => role.Id, (_, role) => role.Name)
+            .ToListAsync(cancellationToken);
+        return Ok(new { userId = user.Id, user.Email, user.DisplayName, roles });
     }
 }
