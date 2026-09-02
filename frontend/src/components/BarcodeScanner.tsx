@@ -19,6 +19,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const onDetectedRef = useRef(onDetected);
+  const startingRef = useRef(false);
   const [manualValue, setManualValue] = useState('');
   const [message, setMessage] = useState('Starting camera...');
   const [starting, setStarting] = useState(false);
@@ -36,7 +37,8 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
   }, []);
 
   const startCamera = useCallback(async () => {
-    if (!videoRef.current || starting) return;
+    if (!videoRef.current || startingRef.current) return;
+    startingRef.current = true;
     stopCamera();
     setStarting(true);
     setMessage('Requesting camera access...');
@@ -68,8 +70,11 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
     } catch (error) {
       stopCamera();
       setMessage(cameraErrorMessage(error));
-    } finally { setStarting(false); }
-  }, [starting, stopCamera]);
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
+    }
+  }, [stopCamera]);
 
   useEffect(() => { void startCamera(); return stopCamera; }, [startCamera, stopCamera]);
 
