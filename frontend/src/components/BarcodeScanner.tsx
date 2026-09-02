@@ -4,9 +4,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 
 type Props = { onDetected: (value: string) => void; onClose: () => void };
-type Detector = { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>> };
-type DetectorConstructor = new () => Detector;
-
 export function BarcodeScanner({ onDetected, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -15,35 +12,27 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
 
   useEffect(() => {
     let active = true;
-    let timer: number | undefined;
+    let controls: { stop: () => void } | undefined;
     const stop = () => {
-      if (timer) window.clearInterval(timer);
+      controls?.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
 
     const start = async () => {
-      const DetectorClass = (window as typeof window & { BarcodeDetector?: DetectorConstructor }).BarcodeDetector;
-      if (!DetectorClass || !navigator.mediaDevices?.getUserMedia) {
-        setMessage('Camera scanning is unavailable on this device. Enter the barcode below.');
-        return;
-      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-        if (!active || !videoRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
-        streamRef.current = stream;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        const detector = new DetectorClass();
-        timer = window.setInterval(async () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) return;
-          const codes = await detector.detect(videoRef.current).catch(() => []);
-          const value = codes.find((code) => code.rawValue?.trim())?.rawValue?.trim();
-          if (value) { stop(); onDetected(value); }
-        }, 350);
+        if (!videoRef.current) return;
+        setMessage('Requesting camera access...');
+        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        const reader = new BrowserMultiFormatReader();
+        controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+          const value = result?.getText()?.trim();
+          if (value && active) { stop(); onDetected(value); }
+        });
+        if (!active) stop();
         setMessage('Point the camera at a product barcode.');
       } catch {
-        setMessage('Camera access was unavailable. Enter the barcode below.');
+        setMessage('Camera access was unavailable or blocked. Enter the barcode below.');
       }
     };
     void start();
