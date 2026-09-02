@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NurturedChoice.Application.Abstractions;
 using NurturedChoice.Application.DTOs.Settings;
 using NurturedChoice.Domain.Entities.Settings;
+using NurturedChoice.Domain.Enums;
 using NurturedChoice.Infrastructure.Persistence;
 
 namespace NurturedChoice.Infrastructure.Services;
@@ -14,6 +15,7 @@ public sealed class NotificationService : INotificationService
     public async Task<IReadOnlyList<NotificationDto>> GetRecentAsync(Guid? userId, CancellationToken cancellationToken = default)
     {
         if (!userId.HasValue) return [];
+        await EnsureOperationalNotificationsAsync(userId.Value, cancellationToken);
         return await _db.Set<Notification>().AsNoTracking()
             .Where(x => x.AppUserId == userId.Value && !x.IsDeleted)
             .OrderByDescending(x => x.CreatedAt)
@@ -25,6 +27,8 @@ public sealed class NotificationService : INotificationService
     public async Task CreateAsync(Guid? userId, string documentType, Guid? documentId, string title, string message, string route, CancellationToken cancellationToken = default)
     {
         if (!userId.HasValue) return;
+        var exists = await _db.Set<Notification>().AnyAsync(x => x.AppUserId == userId.Value && !x.IsDeleted && x.DocumentType == documentType && x.DocumentId == documentId && x.Title == title, cancellationToken);
+        if (exists) return;
         _db.Set<Notification>().Add(new Notification
         {
             AppUserId = userId.Value,
@@ -37,6 +41,30 @@ public sealed class NotificationService : INotificationService
             CreatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task EnsureOperationalNotificationsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var lowStock = await _db.Products.AsNoTracking()
+            .Where(product => !product.IsDeleted && product.CurrentStock <= product.MinimumStock)
+            .Select(product => new { product.Id, product.ProductName, product.CurrentStock })
+            .Take(20)
+            .ToListAsync(cancellationToken);
+        foreach (var product in lowStock)
+        {
+            await CreateAsync(userId, "Stock", product.Id, "Low stock alert", $"{product.ProductName} is low at {product.CurrentStock:0.###} units.", "/stock", cancellationToken);
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var overdue = await _db.Invoices.AsNoTracking()
+            .Where(invoice => !invoice.IsDeleted && invoice.DueDate.HasValue && invoice.DueDate.Value < today && invoice.Status != InvoiceStatus.Paid)
+            .Select(invoice => new { invoice.Id, invoice.InvoiceNumber, invoice.DueDate })
+            .Take(20)
+            .ToListAsync(cancellationToken);
+        foreach (var invoice in overdue)
+        {
+            await CreateAsync(userId, "Invoice", invoice.Id, "Invoice overdue", $"Invoice {invoice.InvoiceNumber} was due on {invoice.DueDate:dd MMM yyyy}.", "/collections", cancellationToken);
+        }
     }
 
     public async Task<bool> MarkReadAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)

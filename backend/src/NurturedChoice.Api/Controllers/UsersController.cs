@@ -15,7 +15,8 @@ public sealed class UsersController : ControllerBase
 {
     private readonly SalesDbContext _db;
     private readonly ICurrentUserService _currentUser;
-    public UsersController(SalesDbContext db, ICurrentUserService currentUser) { _db = db; _currentUser = currentUser; }
+    private readonly INotificationService _notifications;
+    public UsersController(SalesDbContext db, ICurrentUserService currentUser, INotificationService notifications) { _db = db; _currentUser = currentUser; _notifications = notifications; }
     [HttpGet]
     public async Task<IReadOnlyList<UserRoleDto>> Get(CancellationToken cancellationToken) => await _db.AppUsers.AsNoTracking().Select(user => new UserRoleDto(user.Id, user.Email, user.DisplayName, _db.AppUserRoles.Where(link => link.AppUserId == user.Id).Join(_db.AppRoles, link => link.AppRoleId, role => role.Id, (_, role) => role.Name).ToList())).ToListAsync(cancellationToken);
 
@@ -57,6 +58,7 @@ public sealed class UsersController : ControllerBase
         _db.AppUserRoles.RemoveRange(existingRoles);
         _db.AppUserRoles.Add(new AppUserRole { AppUserId = id, AppRoleId = role.Id });
         await _db.SaveChangesAsync(cancellationToken);
+        await _notifications.CreateAsync(user.Id, "User", user.Id, "User role changed", $"Your system role is now {role.Name}.", "/settings", cancellationToken);
         return NoContent();
     }
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Barcode, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { Field, Modal } from '../components/Modal';
 import { Button } from '../components/ui/button';
@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 import type { CreateProductRequest, ProductDto } from '../lib/apiTypes';
 import { downloadCsv } from '../lib/exportCsv';
 import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
+import { BarcodeScanner } from '../components/BarcodeScanner';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 
@@ -73,6 +74,8 @@ export function ProductsPage() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   const productsQuery = useQuery({
     queryKey: ['products'],
@@ -195,12 +198,24 @@ export function ProductsPage() {
     deleteProduct.mutate(id);
   }
 
+  function handleBarcodeDetected(barcode: string) {
+    const product = productsQuery.data?.items.find((item) => item.barcode?.trim() === barcode.trim());
+    setScannerOpen(false);
+    if (!product) {
+      setScanMessage(`No product was found for barcode ${barcode}.`);
+      return;
+    }
+    setScanMessage(null);
+    openEdit(product.id);
+  }
+
   function submit(values: ProductFormValues) {
     saveProduct.mutate(values);
   }
 
   return (
     <>
+      {scanMessage && <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">{scanMessage}</div>}
       <DataTable
         title="Product Catalog"
         subtitle={productsQuery.isLoading ? 'Loading products from the API...' : 'Manage SKUs, pricing, and inventory health.'}
@@ -208,7 +223,7 @@ export function ProductsPage() {
         rows={rows}
         isLoading={productsQuery.isLoading}
         emptyMessage={productsQuery.error ? (productsQuery.error as Error).message : 'No products found.'}
-        actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => downloadCsv('products.csv', (productsQuery.data?.items ?? []).map(p => ({ SKU: p.sku, Product: p.productName, Category: p.category, Stock: p.currentStock, Price: p.sellingPrice, Status: p.status })))}><Download className="h-4 w-4" />Export CSV</Button><Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button></div>}
+        actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><Barcode className="h-4 w-4" />Scan</Button><Button size="sm" variant="outline" onClick={() => downloadCsv('products.csv', (productsQuery.data?.items ?? []).map(p => ({ SKU: p.sku, Product: p.productName, Category: p.category, Stock: p.currentStock, Price: p.sellingPrice, Status: p.status })))}><Download className="h-4 w-4" />Export CSV</Button><Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button></div>}
       />
 
       <Modal
@@ -274,6 +289,7 @@ export function ProductsPage() {
           </div>
         </form>
       </Modal>
+      {scannerOpen && <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setScannerOpen(false)} />}
     </>
   );
 }

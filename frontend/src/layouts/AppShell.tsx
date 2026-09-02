@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { MonthEndReminder } from '../components/MonthEndReminder';
+import { MobileQuickActions } from '../components/MobileQuickActions';
 import type { ThemeMode } from '../lib/types';
 import { useAuth } from '../context/AuthContext';
 
@@ -119,6 +120,7 @@ export function AppShell({ children }: Props) {
         </div>
       )}
       <MobileBottomNav currentPath={location.pathname} onNavigate={navigate} onOpenMore={() => setMobileNavigationOpen(true)} />
+      <MobileQuickActions />
       <MonthEndReminder />
       <CommandPalette
         open={paletteOpen}

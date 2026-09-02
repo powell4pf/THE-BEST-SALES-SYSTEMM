@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Download, Mail, MessageCircle, Pencil, Plus, Printer, Share2, Trash2 } from 'lucide-react';
+import { Barcode, CheckCircle2, Download, Mail, MessageCircle, Pencil, Plus, Printer, Share2, Trash2 } from 'lucide-react';
 import { DataTable } from '../components/DataTable';
 import { Field, Modal } from '../components/Modal';
 import { Button } from '../components/ui/button';
@@ -17,6 +18,7 @@ import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, 
 import { openLetterheadPrintWindow } from '../lib/print';
 import { downloadInvoicePdf, shareInvoiceByEmail, shareInvoiceByWhatsApp, type InvoicePdfData } from '../lib/invoiceShare';
 import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
+import { BarcodeScanner } from '../components/BarcodeScanner';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 const defaultInvoiceNote = 'Thank you for doing business with us.';
@@ -113,6 +115,9 @@ function toRequest(values: InvoiceFormValues): CreateInvoiceRequest {
 export function InvoicesPage() {
   const auth = useAuth();
   const canDelete = hasFullAdministrativeAccess(auth.user?.roles ?? []);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [scannerOpen, setScannerOpen] = useState(false);
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -155,6 +160,25 @@ export function InvoicesPage() {
 
   const selectedCustomer = useMemo(() => findCustomer(parentGroupId), [parentGroupId, customers]);
   const branchOptions = selectedCustomer?.branches ?? [];
+
+  useEffect(() => {
+    if (location.state?.openScanner) {
+      setScannerOpen(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
+
+  function handleBarcodeDetected(barcode: string) {
+    const product = products.find((item) => item.barcode?.trim() === barcode.trim());
+    if (!product) {
+      setSubmissionMessage(`No product was found for barcode ${barcode}. Add the barcode to the product catalog first.`);
+      setScannerOpen(false);
+      return;
+    }
+    append({ id: undefined, productId: product.id, productName: product.productName, quantity: '1', unitPrice: String(product.sellingPrice) });
+    setSubmissionMessage(null);
+    setScannerOpen(false);
+  }
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -570,6 +594,11 @@ export function InvoicesPage() {
                 <h4 className="text-base font-semibold text-slate-950 dark:text-white">Invoice Items</h4>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Pick a product and the price will seed automatically.</p>
               </div>
+              <div className="flex shrink-0 items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setScannerOpen(true)}>
+                <Barcode className="h-4 w-4" />
+                Scan
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -579,6 +608,7 @@ export function InvoicesPage() {
                 <Plus className="h-4 w-4" />
                 Add Item
               </Button>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -633,6 +663,7 @@ export function InvoicesPage() {
           </div>
         </form>
       </Modal>
+      {scannerOpen && <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setScannerOpen(false)} />}
     </>
   );
 }
