@@ -19,8 +19,15 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       if (reloadForUpdate || navigator.serviceWorker.controller) window.location.reload();
     });
 
-    void navigator.serviceWorker.register('/service-worker.js?v=6', { updateViaCache: 'none' }).then((registration) => {
+    void navigator.serviceWorker.register('/service-worker.js?v=7', { updateViaCache: 'none' }).then((registration) => {
       if (registration.waiting && navigator.serviceWorker.controller) announceUpdate(registration);
+      const checkForUpdate = () => { void registration.update().catch(() => undefined); };
+      checkForUpdate();
+      const updateTimer = window.setInterval(checkForUpdate, 30_000);
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
       registration.addEventListener('updatefound', () => {
         const worker = registration.installing;
         if (!worker) return;
@@ -29,6 +36,10 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
         });
       });
       window.addEventListener('nurtured-choice-update-requested', () => { reloadForUpdate = true; }, { once: true });
+      window.addEventListener('beforeunload', () => {
+        window.clearInterval(updateTimer);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }, { once: true });
     }).catch(() => {
       // The application remains fully usable when a browser blocks service workers.
     });

@@ -42,7 +42,7 @@ export function UpdatePrompt() {
     <aside className="update-prompt" role="status" aria-live="polite">
       <div className="min-w-0">
         <div className="text-sm font-semibold text-slate-950 dark:text-white">Update available</div>
-        <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300">A newer version is ready. Update when you have finished your current work.</p>
+        <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300">A newer version is ready. Update now to use the latest system.</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Button size="sm" variant="primary" onClick={updateNow} disabled={updating}>{updating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{updating ? 'Updating' : 'Update'}</Button>
