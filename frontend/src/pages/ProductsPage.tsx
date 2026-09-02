@@ -75,6 +75,7 @@ export function ProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanTarget, setScanTarget] = useState<'product' | 'barcode'>('product');
   const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   const productsQuery = useQuery({
@@ -93,7 +94,7 @@ export function ProductsPage() {
     defaultValues: emptyValues()
   });
 
-  const { handleSubmit, reset, formState: { errors, isSubmitting } } = form;
+  const { handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = form;
 
   const saveProduct = useMutation({
     mutationFn: async (values: ProductFormValues) => {
@@ -199,6 +200,12 @@ export function ProductsPage() {
   }
 
   function handleBarcodeDetected(barcode: string) {
+    if (scanTarget === 'barcode') {
+      setValue('barcode', barcode, { shouldDirty: true, shouldValidate: true });
+      setScanMessage(null);
+      setScannerOpen(false);
+      return;
+    }
     const product = productsQuery.data?.items.find((item) => item.barcode?.trim() === barcode.trim());
     setScannerOpen(false);
     if (!product) {
@@ -223,7 +230,7 @@ export function ProductsPage() {
         rows={rows}
         isLoading={productsQuery.isLoading}
         emptyMessage={productsQuery.error ? (productsQuery.error as Error).message : 'No products found.'}
-        actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><Barcode className="h-4 w-4" />Scan</Button><Button size="sm" variant="outline" onClick={() => downloadCsv('products.csv', (productsQuery.data?.items ?? []).map(p => ({ SKU: p.sku, Product: p.productName, Category: p.category, Stock: p.currentStock, Price: p.sellingPrice, Status: p.status })))}><Download className="h-4 w-4" />Export CSV</Button><Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button></div>}
+        actions={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { setScanTarget('product'); setScannerOpen(true); }}><Barcode className="h-4 w-4" />Scan</Button><Button size="sm" variant="outline" onClick={() => downloadCsv('products.csv', (productsQuery.data?.items ?? []).map(p => ({ SKU: p.sku, Product: p.productName, Category: p.category, Stock: p.currentStock, Price: p.sellingPrice, Status: p.status })))}><Download className="h-4 w-4" />Export CSV</Button><Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" />Add Product</Button></div>}
       />
 
       <Modal
@@ -250,7 +257,7 @@ export function ProductsPage() {
               <Input {...form.register('sku')} placeholder="QHH-001" />
             </Field>
             <Field label="Barcode" required error={errors.barcode?.message}>
-              <Input {...form.register('barcode')} placeholder="890100000001" />
+              <div className="flex gap-2"><Input className="min-w-0 flex-1" {...form.register('barcode')} placeholder="890100000001" /><Button type="button" variant="outline" className="shrink-0" onClick={() => { setScanTarget('barcode'); setScannerOpen(true); }} aria-label="Scan barcode into barcode field"><Barcode className="h-4 w-4" /><span className="hidden sm:inline">Scan</span></Button></div>
             </Field>
             <Field label="Product Name" required error={errors.productName?.message} className="md:col-span-2">
               <Input {...form.register('productName')} placeholder="Quick Health Honey 500g" />
