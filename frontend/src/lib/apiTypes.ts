@@ -345,5 +345,13 @@ export type UpdateCompanyProfileRequest = Omit<CompanyProfileDto, 'id' | 'logoUr
 
 export type StockDashboardDto = {
   stats: Array<[string, string]>;
-  movements: string[];
+  movements: StockMovementDto[];
+};
+
+export type StockMovementDto = {
+  createdAt: string;
+  productName: string;
+  movementType: string;
+  quantity: number;
+  currentStock: number;
 };

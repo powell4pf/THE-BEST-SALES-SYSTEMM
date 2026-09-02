@@ -361,7 +361,7 @@ export const api = {
     });
   },
   async getStockDashboard(): Promise<StockDashboardDto> {
-    const dashboard = await request<{ stats: Array<{ label: string; value: string }>; movements: string[] }>('/api/v1/stock/dashboard');
+    const dashboard = await request<{ stats: Array<{ label: string; value: string }>; movements: StockDashboardDto['movements'] }>('/api/v1/stock/dashboard');
     return {
       stats: dashboard.stats.map((stat) => [stat.label, stat.value]),
       movements: dashboard.movements

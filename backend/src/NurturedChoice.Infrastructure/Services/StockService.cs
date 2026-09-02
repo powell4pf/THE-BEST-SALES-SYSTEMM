@@ -24,11 +24,16 @@ public sealed class StockService : IStockService
             join product in _db.Products.AsNoTracking() on movement.ProductId equals product.Id
             where !movement.IsDeleted && !product.IsDeleted
             orderby movement.CreatedAt descending
-            select new { product.ProductName, movement.MovementType, movement.Quantity, movement.CreatedAt }
+            select new { product.ProductName, movement.MovementType, movement.Quantity, product.CurrentStock, movement.CreatedAt }
         ).Take(10).ToListAsync(cancellationToken);
 
-        var movementText = movements
-            .Select(x => $"{x.CreatedAt:dd MMM yyyy HH:mm} - {x.MovementType}: {x.Quantity:0.###} {x.ProductName}")
+        var movementDetails = movements
+            .Select(x => new StockMovementDto(
+                x.CreatedAt,
+                x.ProductName,
+                x.MovementType.ToString(),
+                x.Quantity,
+                x.CurrentStock))
             .ToList();
 
         return new StockDashboardDto(
@@ -37,6 +42,6 @@ public sealed class StockService : IStockService
             new StockDashboardStatDto("Units On Hand", unitsOnHand.ToString("N0")),
             new StockDashboardStatDto("Inventory Value", $"KES {inventoryValue:N0}"),
             new StockDashboardStatDto("Low Stock Alerts", lowStockCount.ToString("N0"))
-        ], movementText);
+        ], movementDetails);
     }
 }
