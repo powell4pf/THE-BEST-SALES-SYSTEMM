@@ -8,7 +8,7 @@ type Props = { onDetected: (value: string) => void; onClose: () => void };
 function cameraErrorMessage(error: unknown) {
   const name = error instanceof DOMException ? error.name : '';
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return 'Camera access requires the secure HTTPS Railway address. Open the site in Chrome or Safari using https://.';
-  if (name === 'NotAllowedError' || name === 'SecurityError') return 'Camera permission was denied. Allow camera access for this site in your browser settings, then tap Enable camera.';
+  if (name === 'NotAllowedError' || name === 'SecurityError') return 'The browser did not grant camera access. Tap Allow in the camera prompt; if you previously blocked it, reset this site permission once and try again.';
   if (name === 'NotReadableError') return 'The camera is busy in another app. Close other camera apps and tap Enable camera again.';
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'No usable camera was found. Check the browser permissions and try again.';
   return 'Camera could not start. Check browser permissions and HTTPS, then tap Enable camera again.';
@@ -82,7 +82,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
     <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl dark:bg-slate-900">
       <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">Scan product barcode</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{message}</p></div><Button variant="ghost" size="sm" className="h-9 w-9 rounded-xl px-0" onClick={onClose} aria-label="Close barcode scanner"><X className="h-4 w-4" /></Button></div>
       <div className="mt-4 overflow-hidden rounded-2xl bg-slate-950"><video ref={videoRef} className="aspect-video w-full object-cover" autoPlay muted playsInline /></div>
-      {!cameraReady && <Button type="button" className="mt-3 w-full" onClick={() => void startCamera()} disabled={starting}>{starting ? 'Requesting camera…' : 'Enable camera'}</Button>}
+      {!cameraReady && <Button type="button" className="mt-3 w-full" onClick={() => void startCamera()} disabled={starting}>{starting ? 'Requesting camera…' : 'Allow camera access'}</Button>}
       <div className="mt-4 flex gap-2"><Input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter barcode manually" inputMode="numeric" /><Button onClick={() => { if (manualValue.trim()) onDetectedRef.current(manualValue.trim()); }} disabled={!manualValue.trim()}><Camera className="h-4 w-4" />Use</Button></div>
     </div>
   </div>;
