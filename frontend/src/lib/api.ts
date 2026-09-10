@@ -251,8 +251,40 @@ export const api = {
       method: 'DELETE'
     });
   },
-  async listInvoices(pageSize = 1000): Promise<PagedResult<InvoiceDto>> {
-    return request<PagedResult<InvoiceDto>>(`/api/v1/invoices?page=1&pageSize=${pageSize}`);
+  async listInvoices(pageSize = 200): Promise<PagedResult<InvoiceDto>> {
+    const effectivePageSize = Math.min(Math.max(pageSize, 1), 200);
+    const allInvoicesCacheKey = '/api/v1/invoices?offline=all';
+    let firstPage: PagedResult<InvoiceDto> | null = null;
+
+    if (!navigator.onLine) {
+      const cached = await readOfflineValue<PagedResult<InvoiceDto>>(allInvoicesCacheKey);
+      if (cached) return cached;
+    }
+
+    try {
+      firstPage = await request<PagedResult<InvoiceDto>>(`/api/v1/invoices?page=1&pageSize=${effectivePageSize}`);
+      const pageCount = Math.ceil(firstPage.totalCount / effectivePageSize);
+      if (pageCount <= 1) {
+        void cacheOfflineValue(allInvoicesCacheKey, firstPage);
+        return firstPage;
+      }
+
+      const remainingPages = await Promise.all(
+        Array.from({ length: pageCount - 1 }, (_, index) => request<PagedResult<InvoiceDto>>(`/api/v1/invoices?page=${index + 2}&pageSize=${effectivePageSize}`))
+      );
+      const allInvoices: PagedResult<InvoiceDto> = {
+        ...firstPage,
+        items: [firstPage.items, ...remainingPages.map((page) => page.items)].flat(),
+        pageSize: firstPage.totalCount
+      };
+      void cacheOfflineValue(allInvoicesCacheKey, allInvoices);
+      return allInvoices;
+    } catch (error) {
+      const cached = await readOfflineValue<PagedResult<InvoiceDto>>(allInvoicesCacheKey);
+      if (cached) return cached;
+      if (firstPage) return firstPage;
+      throw error;
+    }
   },
   async listCreditNotes(pageSize = 1000): Promise<PagedResult<CreditNoteListItemDto>> {
     return request<PagedResult<CreditNoteListItemDto>>(`/api/v1/credit-notes?page=1&pageSize=${pageSize}`);

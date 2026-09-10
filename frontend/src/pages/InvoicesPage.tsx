@@ -553,7 +553,7 @@ export function InvoicesPage() {
       )}
       <DataTable
         title="Invoice Management"
-        subtitle={isLoading ? 'Loading invoices from the API...' : 'Create, edit, and validate customer invoices.'}
+        subtitle={isLoading ? 'Loading invoices from the API...' : online ? 'Create, edit, and validate customer invoices.' : 'Offline mode: showing the last synchronized invoices stored on this device.'}
         columns={columns}
         rows={rows}
         isLoading={isLoading}
