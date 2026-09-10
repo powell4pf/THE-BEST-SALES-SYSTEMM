@@ -75,7 +75,8 @@ export function AppShell({ children }: Props) {
       '/collections': 'Collections',
       '/reports': 'Reports',
       '/portal': 'Customer Portal',
-      '/settings': 'Settings'
+      '/settings': 'Settings',
+      '/offline-sync': 'Offline Sync'
     };
     return map[location.pathname] ?? 'Nurtured Choice';
   }, [location.pathname]);

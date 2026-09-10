@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, ClipboardCheck, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins, X } from 'lucide-react';
+import { BarChart3, Boxes, ClipboardCheck, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins, X, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Button } from './ui/button';
 import { useQuery } from '@tanstack/react-query';
@@ -26,6 +26,7 @@ const navigation = [
   { label: 'Collections', path: '/collections', icon: HandCoins },
   { label: 'Reports', path: '/reports', icon: BarChart3 },
   { label: 'Customer Portal', path: '/portal', icon: ShieldCheck },
+  { label: 'Offline Sync', path: '/offline-sync', icon: RefreshCw },
   { label: 'Settings', path: '/settings', icon: Settings }
 ];
 

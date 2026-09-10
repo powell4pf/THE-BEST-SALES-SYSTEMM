@@ -15,6 +15,7 @@ import { SettingsPage } from '../pages/SettingsPage';
 import { PaymentsPage } from '../pages/PaymentsPage';
 import { CollectionsPage } from '../pages/CollectionsPage';
 import { LoginPage } from '../pages/LoginPage';
+import { OfflineSyncPage } from '../pages/OfflineSyncPage';
 
 export function AppRoutes() {
   return (
@@ -40,6 +41,7 @@ export function AppRoutes() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/portal" element={<PortalPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/offline-sync" element={<OfflineSyncPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

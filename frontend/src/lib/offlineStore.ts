@@ -7,7 +7,7 @@ export type OfflineDraft = {
   path: string;
   body: string;
   createdAt: string;
-  status: 'pending' | 'failed';
+  status: 'pending' | 'failed' | 'synchronized';
   error?: string;
 };
 
@@ -78,4 +78,9 @@ export async function updateOfflineDraft(id: string, changes: Partial<OfflineDra
 export async function removeOfflineDraft(id: string) {
   await run<void>(DRAFT_STORE, 'readwrite', (store, resolve, reject) => { const request = store.delete(id); request.onsuccess = () => resolve(); request.onerror = () => reject(request.error); });
   notifyDraftsChanged();
+}
+
+export async function clearSynchronizedDrafts() {
+  const drafts = await listOfflineDrafts();
+  await Promise.all(drafts.filter((draft) => draft.status === 'synchronized').map((draft) => removeOfflineDraft(draft.id)));
 }
