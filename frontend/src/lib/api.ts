@@ -45,6 +45,17 @@ const defaultApiBaseUrl = localFrontendHost || import.meta.env.DEV ? 'http://loc
 const apiBaseUrl = (configuredLocalFrontendUrl || (!configuredApiBaseUrl && localFrontendHost)
   ? 'http://localhost:5276'
   : configuredApiBaseUrl || defaultApiBaseUrl).replace(/\/$/, '');
+const API_REQUEST_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase();
@@ -59,7 +70,7 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
 
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetchWithTimeout(`${apiBaseUrl}${path}`, {
       ...init,
       headers
     });
@@ -77,7 +88,7 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
       const retryHeaders = new Headers(init.headers);
       retryHeaders.set('Content-Type', 'application/json');
       retryHeaders.set('Authorization', `Bearer ${refreshed.accessToken}`);
-      const retryResponse = await fetch(`${apiBaseUrl}${path}`, {
+      const retryResponse = await fetchWithTimeout(`${apiBaseUrl}${path}`, {
         ...init,
         headers: retryHeaders
       });
@@ -110,7 +121,7 @@ export async function replayOfflineDraft(draft: OfflineDraft): Promise<void> {
   const headers = new Headers({ 'Content-Type': 'application/json', 'X-Offline-Draft-Id': draft.id });
   const tokens = loadAuthTokens();
   if (tokens?.accessToken) headers.set('Authorization', `Bearer ${tokens.accessToken}`);
-  const response = await fetch(`${apiBaseUrl}${draft.path}`, { method: draft.method, headers, body: draft.body });
+  const response = await fetchWithTimeout(`${apiBaseUrl}${draft.path}`, { method: draft.method, headers, body: draft.body });
   if (!response.ok) throw await toError(response);
 }
 
