@@ -16,6 +16,7 @@ import { PaymentsPage } from '../pages/PaymentsPage';
 import { CollectionsPage } from '../pages/CollectionsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { OfflineSyncPage } from '../pages/OfflineSyncPage';
+import { SystemHealthPage } from '../pages/SystemHealthPage';
 
 export function AppRoutes() {
   return (
@@ -42,6 +43,7 @@ export function AppRoutes() {
         <Route path="/portal" element={<PortalPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/offline-sync" element={<OfflineSyncPage />} />
+        <Route path="/system-health" element={<SystemHealthPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
