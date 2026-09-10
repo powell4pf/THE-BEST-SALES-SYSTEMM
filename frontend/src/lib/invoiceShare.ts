@@ -81,10 +81,10 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 18;
+  const margin = 14;
   const contentWidth = pageWidth - margin * 2;
   const letterhead = await loadLetterhead();
-  const contentStart = letterhead ? 61 : 36;
+  const contentStart = letterhead ? 48 : 34;
   let y = contentStart;
 
   const drawPageBackground = () => {
@@ -104,55 +104,48 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   };
 
   drawPageBackground();
-  const ensurePage = (height: number) => {
-    if (y + height <= pageHeight - 20) return;
-    pdf.addPage();
-    drawPageBackground();
-    y = contentStart;
-  };
-
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
-  pdf.text('INVOICE', margin, y + 5);
+  pdf.setFontSize(7.5);
+  pdf.text('INVOICE', margin, y + 4);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(20);
-  pdf.text(invoice.invoiceNumber, margin, y + 14);
-  pdf.setFontSize(8.5);
+  pdf.setFontSize(18);
+  pdf.text(invoice.invoiceNumber, margin, y + 12);
+  pdf.setFontSize(7.5);
   pdf.setTextColor(71, 85, 105);
-  pdf.text(`LPO No: ${invoice.lpoNumber || 'Not provided'}`, margin, y + 22);
+  pdf.text(`LPO No: ${invoice.lpoNumber || 'Not provided'}`, margin, y + 19);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
+  pdf.setFontSize(7.5);
   pdf.setTextColor(107, 114, 128);
-  pdf.text('DATE', pageWidth - margin, y + 5, { align: 'right' });
+  pdf.text('DATE', pageWidth - margin, y + 4, { align: 'right' });
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.text(invoice.invoiceDate, pageWidth - margin, y + 13, { align: 'right' });
+  pdf.setFontSize(9.5);
+  pdf.text(invoice.invoiceDate, pageWidth - margin, y + 11, { align: 'right' });
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
+  pdf.setFontSize(7.5);
   pdf.setTextColor(107, 114, 128);
-  pdf.text('DUE', pageWidth - margin, y + 22, { align: 'right' });
+  pdf.text('DUE', pageWidth - margin, y + 18, { align: 'right' });
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.text(invoice.dueDate || 'Not specified', pageWidth - margin, y + 30, { align: 'right' });
-  y += 39;
+  pdf.setFontSize(9.5);
+  pdf.text(invoice.dueDate || 'Not specified', pageWidth - margin, y + 26, { align: 'right' });
+  y += 31;
 
   const drawDetailsCard = (x: number, title: string, values: string[]) => {
     const cardWidth = (contentWidth - 8) / 2;
     const lines = values.flatMap((value) => pdf.splitTextToSize(value, cardWidth - 12));
-    const cardHeight = Math.max(48, 24 + lines.length * 5.5 + 8);
+    const cardHeight = Math.max(35, 16 + lines.length * 4.2 + 5);
     pdf.setDrawColor(229, 231, 235);
     pdf.setLineWidth(0.35);
     pdf.roundedRect(x, y, cardWidth, cardHeight, 4, 4, 'S');
     pdf.setTextColor(17, 24, 39);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.text(title, x + 5, y + 13);
+    pdf.setFontSize(11);
+    pdf.text(title, x + 5, y + 9);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.text(lines, x + 5, y + 23);
+    pdf.setFontSize(7.5);
+    pdf.text(lines, x + 5, y + 16);
     return cardHeight;
   };
 
@@ -164,80 +157,72 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
     drawDetailsCard(margin, 'Bill To', customerValues.length ? customerValues : ['Customer details unavailable']),
     drawDetailsCard(margin + (contentWidth + 8) / 2, 'Branch', branchValues.length ? branchValues : ['Unknown branch'])
   );
-  y += cardHeight + 8;
+  y += cardHeight + 5;
 
   const total = invoice.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const productX = margin + 5;
   const qtyX = pageWidth - margin - 68;
   const unitX = pageWidth - margin - 35;
   const totalX = pageWidth - margin - 3;
-  const headerHeight = 9;
-  ensurePage(headerHeight + 20);
+  const headerHeight = 7;
   pdf.setFillColor(248, 250, 252);
   pdf.setDrawColor(229, 231, 235);
   pdf.rect(margin, y, contentWidth, headerHeight, 'FD');
   pdf.setTextColor(55, 65, 81);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8.5);
-  pdf.text('Product', productX, y + 6);
-  pdf.text('Qty', qtyX, y + 6, { align: 'right' });
-  pdf.text('Unit Price', unitX, y + 6, { align: 'right' });
-  pdf.text('Total', totalX, y + 6, { align: 'right' });
+  pdf.setFontSize(7.3);
+  pdf.text('Product', productX, y + 4.8);
+  pdf.text('Qty', qtyX, y + 4.8, { align: 'right' });
+  pdf.text('Unit Price', unitX, y + 4.8, { align: 'right' });
+  pdf.text('Total', totalX, y + 4.8, { align: 'right' });
   y += headerHeight;
 
   invoice.items.forEach((item) => {
-    const nameLines = pdf.splitTextToSize(item.itemName || item.productName || 'Invoice item', 76);
-    const rowHeight = Math.max(9, nameLines.length * 5.2 + 4);
-    ensurePage(rowHeight + 4);
+    const nameLines = pdf.splitTextToSize(item.itemName || item.productName || 'Invoice item', 82);
+    const rowHeight = Math.max(7, nameLines.length * 4 + 3);
     pdf.setDrawColor(229, 231, 235);
     pdf.rect(margin, y, contentWidth, rowHeight, 'S');
     pdf.setTextColor(17, 24, 39);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8.5);
-    pdf.text(nameLines, productX, y + 6);
+    pdf.setFontSize(7.5);
+    pdf.text(nameLines, productX, y + 4.8);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(String(item.quantity), qtyX, y + 6, { align: 'right' });
-    pdf.text(money(item.unitPrice), unitX, y + 6, { align: 'right' });
-    pdf.text(money(item.quantity * item.unitPrice), totalX, y + 6, { align: 'right' });
+    pdf.text(String(item.quantity), qtyX, y + 4.8, { align: 'right' });
+    pdf.text(money(item.unitPrice), unitX, y + 4.8, { align: 'right' });
+    pdf.text(money(item.quantity * item.unitPrice), totalX, y + 4.8, { align: 'right' });
     y += rowHeight;
   });
 
-  ensurePage(52);
   const summaryX = pageWidth - margin - 76;
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.text('Total', summaryX, y + 10);
+  pdf.setFontSize(8.5);
+  pdf.text('Total', summaryX, y + 7);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
-  pdf.text(money(total), pageWidth - margin, y + 10, { align: 'right' });
-  y += 18;
+  pdf.setFontSize(11);
+  pdf.text(money(total), pageWidth - margin, y + 7, { align: 'right' });
+  y += 13;
 
   const notes = pdf.splitTextToSize(invoice.notes?.trim() || defaultInvoiceNote, contentWidth - 12);
-  const notesHeight = Math.max(30, 17 + notes.length * 5.2);
-  ensurePage(notesHeight + 6);
+  const notesHeight = Math.max(22, 13 + notes.length * 4);
   pdf.setFillColor(248, 250, 252);
   pdf.setDrawColor(229, 231, 235);
   pdf.roundedRect(margin, y, contentWidth, notesHeight, 4, 4, 'FD');
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.text('Notes', margin + 5, y + 11);
+  pdf.setFontSize(9);
+  pdf.text('Notes', margin + 5, y + 8.5);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.text(notes, margin + 5, y + 21);
+  pdf.setFontSize(8);
+  pdf.text(notes, margin + 5, y + 16);
 
-  const pages = pdf.getNumberOfPages();
-  for (let page = 1; page <= pages; page += 1) {
-    pdf.setPage(page);
-    pdf.setDrawColor(226, 232, 240);
-    pdf.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);
-    pdf.setTextColor(100, 116, 139);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    pdf.text('Thank you for your business.', margin, pageHeight - 8);
-    pdf.text(`Page ${page} of ${pages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
-  }
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7);
+  pdf.text('Thank you for your business.', margin, pageHeight - 8);
+  pdf.text('Page 1 of 1', pageWidth - margin, pageHeight - 8, { align: 'right' });
 
   return new File([pdf.output('blob')], `Invoice-${safeFilename(invoice.invoiceNumber)}.pdf`, { type: 'application/pdf' });
 }
