@@ -51,9 +51,9 @@ export function DashboardPage() {
   const validRange = Boolean(dateRange.startDate && dateRange.endDate && dateRange.startDate <= dateRange.endDate && rangeDays <= 366);
   const [summary, period, activity] = useQueries({
     queries: [
-      { queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 15000, staleTime: 0 },
-      { queryKey: ['dashboard', 'period', dateRange.startDate, dateRange.endDate], queryFn: () => api.getDashboardPeriod(dateRange.startDate, dateRange.endDate), enabled: validRange, refetchInterval: 15000, staleTime: 0 },
-      { queryKey: ['dashboard', 'activity'], queryFn: api.getRecentActivity, refetchInterval: 15000, staleTime: 0 }
+      { queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 60000, staleTime: 30000 },
+      { queryKey: ['dashboard', 'period', dateRange.startDate, dateRange.endDate], queryFn: () => api.getDashboardPeriod(dateRange.startDate, dateRange.endDate), enabled: validRange, refetchInterval: 60000, staleTime: 30000 },
+      { queryKey: ['dashboard', 'activity'], queryFn: api.getRecentActivity, refetchInterval: 60000, staleTime: 30000 }
     ]
   });
 

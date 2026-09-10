@@ -30,7 +30,7 @@ const navigation = [
 ];
 
 export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed, onClose, className }: Props) {
-  const summaryQuery = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 15000, staleTime: 0 });
+  const summaryQuery = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 60000, staleTime: 30000 });
   const todaySales = summaryQuery.data?.todaySales ?? 0;
   const money = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 });
 

@@ -37,9 +37,11 @@ public sealed class DashboardService : IDashboardService
         var monthlySales = await invoices.Where(x => x.InvoiceDate >= monthStart).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
         var annualSales = await invoices.Where(x => x.InvoiceDate >= yearStart).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
         var outstanding = await invoices.Where(x => x.Status != InvoiceStatus.Paid).SumAsync(x => (decimal?)x.GrandTotal, ct) ?? 0;
+        var customerCount = await _db.ParentGroups.CountAsync(ct);
+        var productCount = await _db.Products.CountAsync(ct);
         return new DashboardSummaryDto(totalSales, todaySales, monthlySales, annualSales,
-            await _db.ParentGroups.CountAsync(ct), await _db.ParentGroups.CountAsync(ct), await _db.Branches.CountAsync(ct),
-            await _db.Products.CountAsync(ct), await _db.StockBalances.SumAsync(x => (decimal?)x.QuantityOnHand, ct) ?? 0,
+            customerCount, customerCount, await _db.Branches.CountAsync(ct),
+            productCount, await _db.StockBalances.SumAsync(x => (decimal?)x.QuantityOnHand, ct) ?? 0,
             await _db.Products.CountAsync(x => x.CurrentStock <= x.MinimumStock, ct), await invoices.CountAsync(ct),
             await _db.Statements.CountAsync(ct), await _db.CreditNotes.CountAsync(ct), outstanding);
     }

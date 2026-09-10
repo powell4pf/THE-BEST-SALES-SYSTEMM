@@ -17,7 +17,7 @@ public static class DependencyInjection
 
         services.AddSingleton(new DatabaseSchemaOptions(useProductionSchema));
 
-        services.AddDbContext<SalesDbContext>(options =>
+        services.AddDbContextPool<SalesDbContext>(options =>
         {
             options.UseNpgsql(connectionString, npgsql =>
             {
