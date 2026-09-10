@@ -114,6 +114,10 @@ export async function replayOfflineDraft(draft: OfflineDraft): Promise<void> {
   if (!response.ok) throw await toError(response);
 }
 
+export function isApiConnectivityError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith('Cannot connect to the Sales API at ');
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) {
     return undefined as T;

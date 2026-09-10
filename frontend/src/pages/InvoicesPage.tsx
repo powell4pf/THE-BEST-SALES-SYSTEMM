@@ -13,7 +13,7 @@ import { Textarea } from '../components/ui/textarea';
 import type { InvoiceFormValues } from '../lib/schemas';
 import { invoiceSchema } from '../lib/schemas';
 import type { TableColumn } from '../lib/types';
-import { api } from '../lib/api';
+import { api, isApiConnectivityError } from '../lib/api';
 import { saveOfflineDraft } from '../lib/offlineStore';
 import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto, PagedResult } from '../lib/apiTypes';
 import { openLetterheadPrintWindow, openOfflineInvoicePrintWindow } from '../lib/print';
@@ -281,15 +281,31 @@ export function InvoicesPage() {
   const saveInvoice = useMutation({
     mutationFn: async ({ values, finalize }: { values: InvoiceFormValues; finalize: boolean }) => {
       const request = toRequest(values);
-      if (!navigator.onLine) {
+      const saveOffline = async () => {
         await saveOfflineDraft({ kind: 'invoice', method: editingId ? 'PUT' : 'POST', path: editingId ? `/api/v1/invoices/${editingId}` : '/api/v1/invoices', body: JSON.stringify(request) });
         return { id: editingId, offline: true, finalized: false };
       }
+      if (!navigator.onLine) return saveOffline();
       if (editingId) {
-        await api.updateInvoice(editingId, request);
-        return { id: editingId, offline: false, finalized: false };
+        try {
+          await api.updateInvoice(editingId, request);
+          return { id: editingId, offline: false, finalized: false };
+        } catch (error) {
+          // Browsers can report online while the Railway API is unreachable.
+          // Queue only connectivity failures; validation and business-rule errors remain visible.
+          if (isApiConnectivityError(error)) return saveOffline();
+          throw error;
+        }
       }
-      const invoiceId = await api.createInvoice(request);
+      let invoiceId: string;
+      try {
+        invoiceId = await api.createInvoice(request);
+      } catch (error) {
+        // Browsers can report online while the Railway API is unreachable.
+        // Queue only connectivity failures; validation and business-rule errors remain visible.
+        if (isApiConnectivityError(error)) return saveOffline();
+        throw error;
+      }
       if (finalize) await api.finalizeInvoice(invoiceId);
       return { id: invoiceId, offline: false, finalized: finalize };
     },
