@@ -11,6 +11,7 @@ import { Select } from '../components/ui/select';
 import type { ProductRow, TableColumn } from '../lib/types';
 import { productSchema, type ProductFormValues } from '../lib/schemas';
 import { api } from '../lib/api';
+import { saveOfflineDraft } from '../lib/offlineStore';
 import type { CreateProductRequest, ProductDto } from '../lib/apiTypes';
 import { downloadCsv } from '../lib/exportCsv';
 import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
@@ -99,14 +100,25 @@ export function ProductsPage() {
   const saveProduct = useMutation({
     mutationFn: async (values: ProductFormValues) => {
       const request = toRequest(values);
+      if (!navigator.onLine) {
+        await saveOfflineDraft({ kind: 'stock', method: editingId ? 'PUT' : 'POST', path: editingId ? `/api/v1/products/${editingId}` : '/api/v1/products', body: JSON.stringify(request) });
+        return { offline: true };
+      }
       if (editingId) {
         await api.updateProduct(editingId, request);
-        return editingId;
+        return { offline: false };
       }
-
-      return api.createProduct(request);
+      await api.createProduct(request);
+      return { offline: false };
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result.offline) {
+        window.dispatchEvent(new CustomEvent('nurtured-choice-toast', { detail: { tone: 'info', title: 'Stock/product draft saved offline', message: 'It will synchronize automatically when the connection returns.' } }));
+        setModalOpen(false);
+        setEditingId(null);
+        reset(emptyValues());
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ['products'] });
       if (editingId) {
         await queryClient.invalidateQueries({ queryKey: ['product', editingId] });

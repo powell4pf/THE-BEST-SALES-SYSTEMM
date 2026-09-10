@@ -27,6 +27,7 @@ import type { CompanyProfileDto, StockDashboardDto, UpdateCompanyProfileRequest 
 import type { CustomerRevenueDto, ProductPerformanceDto, RecentActivityItemDto, SalesTrendPointDto } from './apiTypes';
 import { clearAuthTokens, loadAuthTokens, saveAuthTokens, type AuthTokens } from './session';
 import { isJwtExpired } from './jwt';
+import { cacheOfflineValue, readOfflineValue, type OfflineDraft } from './offlineStore';
 
 const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 const localFrontendHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname) && ['5173', '4173'].includes(window.location.port);
@@ -46,6 +47,8 @@ const apiBaseUrl = (configuredLocalFrontendUrl || (!configuredApiBaseUrl && loca
   : configuredApiBaseUrl || defaultApiBaseUrl).replace(/\/$/, '');
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+  const method = (init.method ?? 'GET').toUpperCase();
+  const cacheable = method === 'GET' && ['/api/v1/parent-groups', '/api/v1/products', '/api/v1/invoices'].some((prefix) => path.startsWith(prefix));
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
 
@@ -61,6 +64,10 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
       headers
     });
   } catch {
+    if (cacheable) {
+      const cached = await readOfflineValue<T>(path);
+      if (cached !== null) return cached;
+    }
     throw new Error(`Cannot connect to the Sales API at ${apiBaseUrl}. Start the system with start-system.ps1, then refresh this page.`);
   }
 
@@ -79,7 +86,9 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
         throw await toError(retryResponse);
       }
 
-      return parseResponse<T>(retryResponse);
+      const result = await parseResponse<T>(retryResponse);
+      if (cacheable) void cacheOfflineValue(path, result);
+      return result;
     }
   }
 
@@ -92,7 +101,17 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     throw await toError(response);
   }
 
-  return parseResponse<T>(response);
+  const result = await parseResponse<T>(response);
+  if (cacheable) void cacheOfflineValue(path, result);
+  return result;
+}
+
+export async function replayOfflineDraft(draft: OfflineDraft): Promise<void> {
+  const headers = new Headers({ 'Content-Type': 'application/json', 'X-Offline-Draft-Id': draft.id });
+  const tokens = loadAuthTokens();
+  if (tokens?.accessToken) headers.set('Authorization', `Bearer ${tokens.accessToken}`);
+  const response = await fetch(`${apiBaseUrl}${draft.path}`, { method: draft.method, headers, body: draft.body });
+  if (!response.ok) throw await toError(response);
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {

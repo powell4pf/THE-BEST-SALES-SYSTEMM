@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { api } from '../lib/api';
+import { saveOfflineDraft } from '../lib/offlineStore';
 import { downloadCsv } from '../lib/exportCsv';
 import { Download, Trash2 } from 'lucide-react';
 
@@ -18,7 +19,7 @@ export function PaymentsPage() {
   const invoicesQuery = useQuery({ queryKey: ['invoices'], queryFn: () => api.listInvoices() });
   const [customerId, setCustomerId] = useState(''); const [invoiceId, setInvoiceId] = useState(''); const [date, setDate] = useState(today()); const [amount, setAmount] = useState(''); const [method, setMethod] = useState('M-Pesa'); const [reference, setReference] = useState('');
   const invoices = useMemo(() => (invoicesQuery.data?.items ?? []).filter(x => x.parentGroupId === customerId && x.status !== 'Paid' && x.status !== 'Cancelled'), [invoicesQuery.data, customerId]);
-  const savePayment = useMutation({ mutationFn: () => api.createPayment({ customerId, invoiceId: invoiceId || null, paymentDate: date, amount: Number(amount), method, reference: reference || null }), onSuccess: async () => { setAmount(''); setReference(''); setInvoiceId(''); await queryClient.invalidateQueries({ queryKey: ['payments'] }); await queryClient.invalidateQueries({ queryKey: ['invoices'] }); await queryClient.invalidateQueries({ queryKey: ['dashboard'] }); } });
+  const savePayment = useMutation({ mutationFn: async () => { const request = { customerId, invoiceId: invoiceId || null, paymentDate: date, amount: Number(amount), method, reference: reference || null }; if (!navigator.onLine) { await saveOfflineDraft({ kind: 'payment', method: 'POST', path: '/api/v1/payments', body: JSON.stringify(request) }); return { offline: true }; } await api.createPayment(request); return { offline: false }; }, onSuccess: async (result) => { setAmount(''); setReference(''); setInvoiceId(''); if (result.offline) { window.dispatchEvent(new CustomEvent('nurtured-choice-toast', { detail: { tone: 'info', title: 'Payment draft saved offline', message: 'It will synchronize automatically when the connection returns.' } })); return; } await queryClient.invalidateQueries({ queryKey: ['payments'] }); await queryClient.invalidateQueries({ queryKey: ['invoices'] }); await queryClient.invalidateQueries({ queryKey: ['dashboard'] }); } });
   const deletePayment = useMutation({ mutationFn: (id: string) => api.deletePayment(id), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['payments'] }); await queryClient.invalidateQueries({ queryKey: ['invoices'] }); await queryClient.invalidateQueries({ queryKey: ['collections'] }); await queryClient.invalidateQueries({ queryKey: ['dashboard'] }); } });
   const handleDeletePayment = (payment: import('../lib/apiTypes').PaymentDto) => {
     if (!window.confirm(`Delete the ${currency.format(payment.amount)} payment from ${payment.customerName}? This will remove it from payment history and update any linked invoice balance.`)) return;

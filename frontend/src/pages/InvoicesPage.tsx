@@ -14,6 +14,7 @@ import type { InvoiceFormValues } from '../lib/schemas';
 import { invoiceSchema } from '../lib/schemas';
 import type { TableColumn } from '../lib/types';
 import { api } from '../lib/api';
+import { saveOfflineDraft } from '../lib/offlineStore';
 import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto, PagedResult } from '../lib/apiTypes';
 import { openLetterheadPrintWindow } from '../lib/print';
 import { downloadInvoicePdf, shareInvoiceByEmail, shareInvoiceByWhatsApp, type InvoicePdfData } from '../lib/invoiceShare';
@@ -271,15 +272,26 @@ export function InvoicesPage() {
   const saveInvoice = useMutation({
     mutationFn: async ({ values, finalize }: { values: InvoiceFormValues; finalize: boolean }) => {
       const request = toRequest(values);
+      if (!navigator.onLine) {
+        await saveOfflineDraft({ kind: 'invoice', method: editingId ? 'PUT' : 'POST', path: editingId ? `/api/v1/invoices/${editingId}` : '/api/v1/invoices', body: JSON.stringify(request) });
+        return { id: editingId, offline: true, finalized: false };
+      }
       if (editingId) {
         await api.updateInvoice(editingId, request);
-        return editingId;
+        return { id: editingId, offline: false, finalized: false };
       }
       const invoiceId = await api.createInvoice(request);
       if (finalize) await api.finalizeInvoice(invoiceId);
-      return invoiceId;
+      return { id: invoiceId, offline: false, finalized: finalize };
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result.offline) {
+        window.dispatchEvent(new CustomEvent('nurtured-choice-toast', { detail: { tone: 'info', title: 'Invoice draft saved offline', message: 'It will synchronize automatically when the connection returns. It was not finalized.' } }));
+        setModalOpen(false);
+        setEditingId(null);
+        reset(emptyValues('', customers, products));
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ['invoices'] });
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       if (editingId) {
