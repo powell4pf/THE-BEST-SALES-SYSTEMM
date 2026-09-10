@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationsMenu } from './NotificationsMenu';
+import { ConnectionStatus } from './ConnectionStatus';
 import type { ThemeMode } from '../lib/types';
 
 type Props = {
@@ -57,17 +58,23 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
           </Button>
           <NotificationsMenu />
           <ThemeToggle mode={theme} onToggle={onToggleTheme} />
-          <Button variant="ghost" onClick={onLogout}>
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button variant="ghost" onClick={onLogout}>
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+            <ConnectionStatus />
+          </div>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-0.5 lg:hidden">
-        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onOpenPalette} aria-label="Search"><Search className="h-[18px] w-[18px]" /></Button>
-        <Button variant="ghost" size="sm" className="hidden h-10 w-10 rounded-xl px-0 sm:inline-flex" onClick={onRefresh} aria-label="Refresh"><RefreshCw className="h-4 w-4" /></Button>
-        <NotificationsMenu />
-        <ThemeToggle mode={theme} onToggle={onToggleTheme} />
+      <div className="flex shrink-0 flex-col items-end gap-0.5 lg:hidden">
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl px-0" onClick={onOpenPalette} aria-label="Search"><Search className="h-[18px] w-[18px]" /></Button>
+          <Button variant="ghost" size="sm" className="hidden h-10 w-10 rounded-xl px-0 sm:inline-flex" onClick={onRefresh} aria-label="Refresh"><RefreshCw className="h-4 w-4" /></Button>
+          <NotificationsMenu />
+          <ThemeToggle mode={theme} onToggle={onToggleTheme} />
+        </div>
+        <ConnectionStatus compact />
       </div>
     </header>
   );
