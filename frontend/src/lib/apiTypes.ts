@@ -292,8 +292,9 @@ export type CreatePaymentRequest = { customerId: string; branchId?: string | nul
 export type InvoiceNumberSettingsDto = { prefix: string; startingNumber: number; padding: number; resetPolicy: string; manualEditingAllowed: boolean };
 export type UpdateInvoiceNumberSettingsRequest = InvoiceNumberSettingsDto;
 export type SystemSettingDto = { key: string; value: string; description: string | null };
-export type UserRoleDto = { id: string; email: string; displayName: string; roles: string[] };
+export type UserRoleDto = { id: string; email: string; displayName: string; roles: string[]; status: string };
 export type UpdateUserRoleRequest = { role: string };
+export type UpdateUserStatusRequest = { status: 'Active' | 'Inactive' | 'Archived' };
 export type MonthEndReminderDto = { id: string; periodKey: string; title: string; message: string; createdAt: string };
 export type NotificationDto = { id: string; documentType: string; documentId: string | null; title: string; message: string; route: string; createdAt: string; readAt: string | null };
 

@@ -9,7 +9,7 @@ import { Field } from '../components/Modal';
 import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
 import type { CompanyProfileDto, InvoiceNumberSettingsDto, SystemSettingDto, UserRoleDto } from '../lib/apiTypes';
-import { useAuth } from '../context/AuthContext';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 const companyProfileSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -50,6 +50,7 @@ export function SettingsPage() {
   const usersQuery = useQuery<UserRoleDto[]>({ queryKey: ['users'], queryFn: api.listUsers, enabled: activeTab === 'users' });
   const directoryUser = usersQuery.data?.find((user) => user.id === auth.user?.id || user.email.toLowerCase() === auth.user?.email.toLowerCase());
   const isSuperAdministrator = auth.user?.roles.includes('Super Administrator') || directoryUser?.roles.includes('Super Administrator') || false;
+  const canManageUsers = hasFullAdministrativeAccess(auth.user?.roles ?? []);
 
   const form = useForm<CompanyProfileFormValues>({
     resolver: zodResolver(companyProfileSchema)
@@ -85,6 +86,38 @@ export function SettingsPage() {
     },
     onError: (error) => setRoleMessage((error as Error).message || 'Unable to update that user role.')
   });
+  const updateUserStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'Active' | 'Inactive' }) => api.updateUserStatus(id, { status }),
+    onSuccess: async (_, variables) => {
+      setRoleMessage(variables.status === 'Inactive' ? 'User blocked immediately.' : 'User access restored immediately.');
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => setRoleMessage((error as Error).message || 'Unable to update that user access.')
+  });
+  const deleteUser = useMutation({
+    mutationFn: (id: string) => api.deleteUser(id),
+    onSuccess: async () => {
+      setRoleMessage('User deleted and archived safely.');
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => setRoleMessage((error as Error).message || 'Unable to delete that user.')
+  });
+
+  function handleUserStatus(user: UserRoleDto) {
+    const nextStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+    const action = nextStatus === 'Inactive' ? 'block' : 'restore access to';
+    if (window.confirm(`Are you sure you want to ${action} ${user.displayName}?`)) {
+      setRoleMessage(null);
+      updateUserStatus.mutate({ id: user.id, status: nextStatus });
+    }
+  }
+
+  function handleDeleteUser(user: UserRoleDto) {
+    if (window.confirm(`Delete and archive ${user.displayName}? They will no longer be able to sign in.`)) {
+      setRoleMessage(null);
+      deleteUser.mutate(user.id);
+    }
+  }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.5fr_1.5fr]">
@@ -141,7 +174,7 @@ export function SettingsPage() {
         {activeTab === 'numbering' && invoiceSettings && <div><div className="p-6"><h2 className="text-xl font-semibold">Invoice Numbering</h2><p className="mt-2 text-sm text-slate-500">Control invoice prefixes and numbering rules.</p></div><div className="grid gap-4 p-6 md:grid-cols-2"><Field label="Prefix"><Input value={invoiceSettings.prefix} onChange={e => setInvoiceSettings({ ...invoiceSettings, prefix: e.target.value })} /></Field><Field label="Starting Number"><Input type="number" value={invoiceSettings.startingNumber} onChange={e => setInvoiceSettings({ ...invoiceSettings, startingNumber: Number(e.target.value) })} /></Field><Field label="Padding"><Input type="number" value={invoiceSettings.padding} onChange={e => setInvoiceSettings({ ...invoiceSettings, padding: Number(e.target.value) })} /></Field><Field label="Reset Policy"><select className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3" value={invoiceSettings.resetPolicy} onChange={e => setInvoiceSettings({ ...invoiceSettings, resetPolicy: e.target.value })}><option>Never</option><option>Yearly</option><option>Monthly</option></select></Field></div><div className="flex justify-end border-t p-6"><Button onClick={() => saveInvoiceSettings.mutate()} disabled={saveInvoiceSettings.isPending}>{saveInvoiceSettings.isPending ? 'Saving...' : 'Save Changes'}</Button></div></div>}
         {activeTab === 'numbering' && invoiceSettingsQuery.isLoading && <p className="p-6 text-sm text-slate-500">Loading invoice settings...</p>}
         {activeTab === 'system' && <div className="p-6"><h2 className="text-xl font-semibold">System Settings</h2><div className="mt-6 space-y-3">{(systemSettingsQuery.data ?? []).map(setting => <div key={setting.key} className="rounded-2xl border p-4"><div className="font-medium">{setting.key}</div><div className="text-sm text-slate-500">{setting.value}</div><div className="mt-1 text-xs text-slate-400">{setting.description}</div></div>)}</div></div>}
-        {activeTab === 'users' && <div className="p-6"><h2 className="text-xl font-semibold">Users & Roles</h2><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Roles take effect immediately for new requests. Viewers and Testers can work with records but cannot delete them.</p>{roleMessage && <p className="mt-3 text-sm text-emerald-600">{roleMessage}</p>}<div className="mt-6 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Name</th><th>Email</th><th>Role</th></tr></thead><tbody>{(usersQuery.data ?? []).map(user => <tr key={user.id} className="border-b"><td className="py-3">{user.displayName}</td><td>{user.email}</td><td>{isSuperAdministrator ? <select className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-sm dark:border-white/10 dark:bg-slate-900" value={user.roles[0] ?? 'Viewer'} onChange={event => { setRoleMessage(null); updateUserRole.mutate({ id: user.id, role: event.target.value }); }} disabled={updateUserRole.isPending}><option value="">Select role</option>{roleOptions.map(role => <option key={role} value={role}>{role}</option>)}</select> : user.roles.join(', ')}</td></tr>)}</tbody></table>{usersQuery.error && <p className="mt-4 text-sm text-rose-600">{(usersQuery.error as Error).message}</p>}</div></div>}
+        {activeTab === 'users' && <div className="p-6"><h2 className="text-xl font-semibold">Users & Roles</h2><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Administrators, Super Administrators, and CEOs can block or archive unwanted accounts. A user cannot block their own account or remove the last Super Administrator.</p>{roleMessage && <p className="mt-3 text-sm text-emerald-600">{roleMessage}</p>}<div className="mt-6 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="py-3">Name</th><th>Email</th><th>Role</th><th>Status</th>{canManageUsers && <th>Actions</th>}</tr></thead><tbody>{(usersQuery.data ?? []).map(user => { const isSelf = user.id === auth.user?.id; const isBusy = updateUserStatus.isPending || deleteUser.isPending; return <tr key={user.id} className="border-b"><td className="py-3">{user.displayName}</td><td>{user.email}</td><td>{isSuperAdministrator ? <select className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-sm dark:border-white/10 dark:bg-slate-900" value={user.roles[0] ?? 'Viewer'} onChange={event => { setRoleMessage(null); updateUserRole.mutate({ id: user.id, role: event.target.value }); }} disabled={updateUserRole.isPending}><option value="">Select role</option>{roleOptions.map(role => <option key={role} value={role}>{role}</option>)}</select> : user.roles.join(', ')}</td><td><span className={user.status === 'Active' ? 'text-emerald-600' : 'text-rose-600'}>{user.status === 'Archived' ? 'Deleted' : user.status}</span></td>{canManageUsers && <td><div className="flex flex-wrap gap-2 py-2">{user.status !== 'Archived' && <Button size="sm" variant="outline" onClick={() => handleUserStatus(user)} disabled={isSelf || isBusy}>{user.status === 'Active' ? 'Block' : 'Restore'}</Button>}{user.status !== 'Archived' && <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => handleDeleteUser(user)} disabled={isSelf || isBusy}>Delete</Button>}</div></td>}</tr>; })}</tbody></table>{usersQuery.error && <p className="mt-4 text-sm text-rose-600">{(usersQuery.error as Error).message}</p>}</div></div>}
       </Card>
     </div>
   );
