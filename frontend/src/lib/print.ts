@@ -34,6 +34,25 @@ export function openCollectionsPrintWindow(collections: CollectionsForPrint): vo
   printWindow.setTimeout(() => printWindow.print(), 150);
 }
 
+export type OfflineInvoiceForPrint = {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  lpoNumber: string;
+  customerName: string;
+  branchName: string;
+  notes: string;
+  items: Array<{ name: string; quantity: string; unitPrice: string }>;
+};
+
+export function openOfflineInvoicePrintWindow(invoice: OfflineInvoiceForPrint): void {
+  const money = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
+  const total = invoice.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0);
+  const rows = invoice.items.map((item) => `<tr><td>${escapePrintHtml(item.name || 'Invoice item')}</td><td class="amount">${escapePrintHtml(item.quantity)}</td><td class="amount">KES ${money.format(Number(item.unitPrice) || 0)}</td><td class="amount">KES ${money.format((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0))}</td></tr>`).join('');
+  const body = `<div class="offline-warning"><strong>OFFLINE DRAFT — NOT YET FINALIZED</strong><br><span>This printout is for temporary reference only. The official invoice will be created after synchronization.</span></div><div class="invoice-header"><div><div class="eyebrow">INVOICE DRAFT</div><h1>${escapePrintHtml(invoice.invoiceNumber || 'Temporary invoice')}</h1><p>LPO No: ${escapePrintHtml(invoice.lpoNumber || 'Not provided')}</p></div><div class="meta"><p><strong>DATE</strong><br>${escapePrintHtml(invoice.invoiceDate)}</p><p><strong>DUE</strong><br>${escapePrintHtml(invoice.dueDate || 'Not specified')}</p></div></div><div class="details"><div><strong>Bill To</strong><br>${escapePrintHtml(invoice.customerName || 'Customer not selected')}</div><div><strong>Branch</strong><br>${escapePrintHtml(invoice.branchName || 'Branch not selected')}</div></div><table><thead><tr><th>Product</th><th class="amount">Qty</th><th class="amount">Unit Price</th><th class="amount">Total</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No invoice items.</td></tr>'}</tbody><tfoot><tr><td colspan="3"><strong>Total</strong></td><td class="amount"><strong>KES ${money.format(total)}</strong></td></tr></tfoot></table><div class="notes"><strong>Notes</strong><br>${escapePrintHtml(invoice.notes || 'Thank you for doing business with us.')}</div>`;
+  openLetterheadPrintWindow(`Offline Invoice Draft - ${invoice.invoiceNumber || 'Invoice'}`, body, `.offline-warning{border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px}.offline-warning span{font-size:10px}.invoice-header{display:flex;justify-content:space-between;border-bottom:1px solid #cbd5e1;padding-bottom:10px}.eyebrow{font-size:10px;color:#64748b;letter-spacing:.12em}.invoice-header h1{margin:3px 0;font-size:22px}.invoice-header p{margin:3px 0;font-size:10px;color:#64748b}.meta{text-align:right}.meta strong{font-size:9px;color:#64748b}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.details>div,.notes{border:1px solid #e2e8f0;border-radius:7px;padding:9px;font-size:11px;line-height:1.5}.details strong,.notes strong{font-size:10px;color:#475569}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #cbd5e1;padding:6px;text-align:left}th{background:#f1f5f9;text-transform:uppercase;font-size:9px;color:#475569}.amount{text-align:right;white-space:nowrap}tfoot td{border-top:2px solid #0f172a}.notes{margin-top:12px}`);
+}
+
 export type StatementForPrint = {
   customerName: string;
   startDate: string;

@@ -16,7 +16,7 @@ import type { TableColumn } from '../lib/types';
 import { api } from '../lib/api';
 import { saveOfflineDraft } from '../lib/offlineStore';
 import type { CreateInvoiceRequest, InvoiceDetailsDto, InvoiceDto, InvoiceItem, ParentGroupSummaryDto, ProductSummaryDto, PagedResult } from '../lib/apiTypes';
-import { openLetterheadPrintWindow } from '../lib/print';
+import { openLetterheadPrintWindow, openOfflineInvoicePrintWindow } from '../lib/print';
 import { downloadInvoicePdf, shareInvoiceByEmail, shareInvoiceByWhatsApp, type InvoicePdfData } from '../lib/invoiceShare';
 import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 import { BarcodeScanner } from '../components/BarcodeScanner';
@@ -124,7 +124,16 @@ export function InvoicesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [online, setOnline] = useState(() => navigator.onLine);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
+  }, []);
 
   const invoicesQuery = useQuery({ queryKey: ['invoices'], queryFn: () => api.listInvoices() });
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: () => api.listCustomers() });
@@ -548,6 +557,7 @@ export function InvoicesPage() {
           <>
             {submissionMessage ? <div role="alert" className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">{submissionMessage}</div> : null}
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
+            {!online && <Button variant="outline" onClick={handleSubmit((values) => openOfflineInvoicePrintWindow({ invoiceNumber: values.invoiceNumber, invoiceDate: values.invoiceDate, dueDate: values.dueDate, lpoNumber: values.lpoNumber, customerName: selectedCustomer?.companyName ?? '', branchName: branchOptions.find((branch) => branch.id === values.branchId)?.branchName ?? '', notes: values.notes, items: values.items.map((item) => ({ name: item.productName, quantity: item.quantity, unitPrice: item.unitPrice })) }), showValidationErrors)}>Print Offline Draft</Button>}
             {editingId ? (
               <Button onClick={handleSubmit((values) => submit(values), showValidationErrors)} disabled={isSubmitting || saveInvoice.isPending || invoiceDetailsQuery.isLoading || nextInvoiceNumberQuery.isLoading}>{saveInvoice.isPending ? 'Saving…' : 'Save Draft'}</Button>
             ) : (
