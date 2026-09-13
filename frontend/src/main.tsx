@@ -49,8 +49,11 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,
-      refetchOnWindowFocus: false
+      staleTime: 120_000,
+      gcTime: 15 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true
     }
   }
 });
