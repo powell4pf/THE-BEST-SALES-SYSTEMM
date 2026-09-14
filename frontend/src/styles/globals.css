@@ -346,10 +346,45 @@ a {
 
 .sidebar-panel.collapsed {
   width: 88px;
+  min-width: 88px;
+  padding-inline: 0.65rem;
+  gap: 1rem;
+}
+
+.sidebar-panel.collapsed > div:first-child {
+  justify-content: center;
+  padding: 0.65rem;
+}
+
+.sidebar-panel.collapsed > div:first-child > div:first-child {
+  display: none;
+}
+
+.sidebar-panel.collapsed nav button {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0.65rem;
+}
+
+.sidebar-panel.collapsed nav button span,
+.sidebar-panel.collapsed > div:last-child {
+  display: none;
+}
+
+.sidebar-panel nav button {
+  min-width: 0;
+}
+
+.sidebar-panel nav button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-sidebar {
-  width: min(20rem, calc(100vw - 2.5rem));
+  width: min(20rem, calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
   height: 100%;
   max-height: none;
   border-radius: 0 2rem 2rem 0;
@@ -359,6 +394,13 @@ a {
   touch-action: pan-y;
   overscroll-behavior: contain;
   animation: slide-in 180ms ease-out;
+}
+
+.mobile-sidebar nav button span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.15;
 }
 
 .mobile-bottom-nav {
@@ -545,6 +587,19 @@ a {
   }
 }
 
+@media (min-width: 641px) and (max-width: 1024px) {
+  .mobile-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(22rem, calc(100vw - 2rem));
+    height: 100%;
+    max-height: 100dvh;
+    border-radius: 0 2rem 2rem 0;
+  }
+}
+
 @media (max-width: 640px) {
   html { scroll-padding-bottom: 6rem; }
   .dashboard-hero { border-radius: 1.5rem; padding: 1.25rem; }
@@ -600,7 +655,7 @@ a {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: min(78dvh, 43rem);
+    height: min(82dvh, 43rem);
     max-height: none;
     border-radius: 2rem 2rem 0 0;
     padding: 0.85rem;
@@ -615,7 +670,7 @@ a {
   }
 
   .mobile-sidebar nav button {
-    min-height: 3rem;
+    min-height: 3.25rem;
     padding: 0.65rem 0.75rem;
   }
 
