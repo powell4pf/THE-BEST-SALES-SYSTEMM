@@ -58,9 +58,30 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
       video.autoplay = true;
       video.muted = true;
       video.playsInline = true;
+      video.setAttribute('playsinline', 'true');
       await video.play();
       const { BrowserMultiFormatReader } = await import('@zxing/browser');
-      const reader = new BrowserMultiFormatReader();
+      const { BarcodeFormat, DecodeHintType } = await import('@zxing/library');
+      const hints = new Map([
+        [DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.CODE_39,
+          BarcodeFormat.CODE_93,
+          BarcodeFormat.ITF,
+          BarcodeFormat.CODABAR,
+          BarcodeFormat.QR_CODE
+        ]],
+        [DecodeHintType.TRY_HARDER, true]
+      ]);
+      const reader = new BrowserMultiFormatReader(hints, {
+        delayBetweenScanAttempts: 120,
+        delayBetweenScanSuccess: 300,
+        tryPlayVideoTimeout: 10000
+      });
       controlsRef.current = await reader.decodeFromStream(stream, video, (result) => {
         const value = result?.getText()?.trim();
         if (value) { stopCamera(); onDetectedRef.current(value); }
