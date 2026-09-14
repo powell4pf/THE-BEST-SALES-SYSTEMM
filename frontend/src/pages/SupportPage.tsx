@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, Clock3, LifeBuoy, MessageSquare, Plus, Send, ShieldAlert } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -31,7 +31,7 @@ export function SupportPage() {
   const auth = useAuth();
   const queryClient = useQueryClient();
   const isManager = hasFullAdministrativeAccess(auth.user?.roles ?? []);
-  const ticketsQuery = useQuery({ queryKey: ['supportTickets'], queryFn: api.listSupportTickets });
+  const ticketsQuery = useQuery({ queryKey: ['supportTickets'], queryFn: api.listSupportTickets, refetchInterval: 5_000, staleTime: 2_000, refetchOnWindowFocus: true });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -47,8 +47,12 @@ export function SupportPage() {
   const detailQuery = useQuery({
     queryKey: ['supportTicket', selectedId],
     queryFn: () => api.getSupportTicket(selectedId!),
-    enabled: Boolean(selectedId)
+    enabled: Boolean(selectedId),
+    refetchInterval: selectedId ? 2_500 : false,
+    staleTime: 1_000,
+    refetchOnWindowFocus: true
   });
+  const seenMessageIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!selectedId && ticketsQuery.data?.[0]) setSelectedId(ticketsQuery.data[0].id);
@@ -60,6 +64,21 @@ export function SupportPage() {
       setTicketPriority(detailQuery.data.priority);
     }
   }, [detailQuery.data]);
+
+  useEffect(() => {
+    seenMessageIds.current = new Set();
+  }, [selectedId]);
+
+  useEffect(() => {
+    const ticket = detailQuery.data;
+    if (!ticket) return;
+    const seen = seenMessageIds.current;
+    const newIncomingMessages = ticket.messages.filter(message => !seen.has(message.id) && message.appUserId !== auth.user?.id && !message.isInternal);
+    if (seen.size > 0 && newIncomingMessages.length > 0) {
+      window.dispatchEvent(new CustomEvent('nurtured-choice-toast', { detail: { tone: 'info', title: 'New support response', message: `${newIncomingMessages[0].author} replied to ${ticket.ticketNumber}.` } }));
+    }
+    seenMessageIds.current = new Set(ticket.messages.map(message => message.id));
+  }, [auth.user?.id, detailQuery.data]);
 
   const filteredTickets = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -104,7 +123,7 @@ export function SupportPage() {
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950/30"><LifeBuoy className="h-5 w-5" /></div><div><h2 className="text-xl font-semibold">Help & Support</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Raise an issue, request an improvement, or track a response from the support team.</p></div></div></div>
+      <div><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950/30"><LifeBuoy className="h-5 w-5" /></div><div><h2 className="text-xl font-semibold">Help & Support</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Raise an issue, request an improvement, or track a response from the support team.</p><span className="mt-2 inline-flex items-center gap-1.5 text-xs text-emerald-600"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />Live updates enabled</span></div></div></div>
       <Button onClick={() => setShowCreate(true)}><Plus className="h-4 w-4" />New ticket</Button>
     </div>
 

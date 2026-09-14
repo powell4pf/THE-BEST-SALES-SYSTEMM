@@ -23,7 +23,7 @@ export function NotificationsMenu() {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const notificationsQuery = useQuery({ queryKey: ['notifications'], queryFn: api.listNotifications, refetchInterval: 30_000, staleTime: 15_000 });
+  const notificationsQuery = useQuery({ queryKey: ['notifications'], queryFn: api.listNotifications, refetchInterval: 5_000, staleTime: 2_000, refetchOnWindowFocus: true });
   const markRead = useMutation({ mutationFn: api.markNotificationRead, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }) });
   const markAllRead = useMutation({ mutationFn: api.markAllNotificationsRead, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }) });
   const notifications = notificationsQuery.data ?? [];
