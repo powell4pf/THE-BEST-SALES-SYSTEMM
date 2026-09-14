@@ -51,7 +51,7 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
         </Button>
       </div>
 
-      <nav className="flex-1 space-y-1 pr-1">
+      <nav className="flex-1 space-y-1 pr-1" data-onboarding="navigation">
         {navigation.map((item) => {
           const Icon = item.icon;
           const active = currentPath === item.path;

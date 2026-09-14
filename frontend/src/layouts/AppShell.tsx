@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { HelpCircle } from 'lucide-react';
 import { CommandPalette } from '../components/CommandPalette';
 import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { MonthEndReminder } from '../components/MonthEndReminder';
 import { MobileQuickActions } from '../components/MobileQuickActions';
+import { OnboardingTour } from '../components/OnboardingTour';
 import type { ThemeMode } from '../lib/types';
 import { useAuth } from '../context/AuthContext';
 
@@ -104,7 +106,7 @@ export function AppShell({ children }: Props) {
             onOpenNavigation={() => setMobileNavigationOpen(true)}
             pageTitle={pageTitle}
           />
-          <div className="animate-fade-in">{children}</div>
+          <div className="animate-fade-in" data-onboarding="page-content">{children}</div>
         </main>
       </div>
       {mobileNavigationOpen && (
@@ -134,9 +136,10 @@ export function AppShell({ children }: Props) {
           setPaletteOpen(false);
         }}
       />
-      <div className="fixed bottom-5 right-5 hidden rounded-full border border-white/10 bg-slate-950 px-4 py-2 text-xs text-slate-300 shadow-2xl lg:block">
-        {pageTitle}
-      </div>
+      <button type="button" className="fixed bottom-5 right-5 z-30 hidden items-center gap-2 rounded-full border border-white/10 bg-slate-950 px-4 py-2 text-xs text-slate-300 shadow-2xl transition hover:bg-slate-800 lg:flex" onClick={() => window.dispatchEvent(new Event('nurtured-choice-open-onboarding'))}>
+        <HelpCircle className="h-3.5 w-3.5" /> Help & tour
+      </button>
+      <OnboardingTour />
     </div>
   );
 }

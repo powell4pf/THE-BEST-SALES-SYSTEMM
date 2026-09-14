@@ -16,7 +16,7 @@ const items = [
 
 export function MobileBottomNav({ currentPath, onNavigate, onOpenMore }: Props) {
   return (
-    <nav className="mobile-bottom-nav lg:hidden" aria-label="Primary navigation">
+    <nav className="mobile-bottom-nav lg:hidden" aria-label="Primary navigation" data-onboarding="navigation">
       {items.map(({ label, path, icon: Icon }) => {
         const active = currentPath === path;
         return <button key={path} onClick={() => onNavigate(path)} className={cn('mobile-nav-item', active && 'mobile-nav-item-active')} aria-current={active ? 'page' : undefined}><span className="mobile-nav-icon"><Icon className="h-[18px] w-[18px]" /></span><span>{label}</span></button>;

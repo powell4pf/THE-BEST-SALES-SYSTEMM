@@ -21,7 +21,7 @@ type Props = {
 
 export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, onRefresh, onLogout, searchValue, userName, onOpenNavigation, pageTitle }: Props) {
   return (
-    <header className="sticky top-2 z-40 flex items-center justify-between gap-2 rounded-[1.25rem] border border-slate-200/70 bg-white/90 px-3 py-2.5 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 sm:gap-3 sm:rounded-[1.5rem] sm:px-4 sm:py-3 lg:relative lg:top-0 lg:flex-row lg:px-6 lg:py-4">
+    <header className="sticky top-2 z-40 flex items-center justify-between gap-2 rounded-[1.25rem] border border-slate-200/70 bg-white/90 px-3 py-2.5 shadow-soft backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/90 sm:gap-3 sm:rounded-[1.5rem] sm:px-4 sm:py-3 lg:relative lg:top-0 lg:flex-row lg:px-6 lg:py-4" data-onboarding="topbar-actions">
       <div className="flex min-w-0 items-center gap-3">
         <Button variant="outline" size="sm" className="h-10 w-10 shrink-0 rounded-xl px-0 lg:hidden" onClick={onOpenNavigation} aria-label="Open navigation menu"><Menu className="h-4 w-4" /></Button>
         <div className="flex min-w-0 items-center gap-3">
@@ -37,7 +37,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
       </div>
 
       <div className="hidden w-full flex-col gap-3 lg:flex lg:w-auto lg:flex-row lg:items-center">
-        <div className="relative w-full lg:w-[26rem]">
+        <div className="relative w-full lg:w-[26rem]" data-onboarding="search">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={searchValue}
@@ -63,7 +63,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
-            <ConnectionStatus />
+            <div data-onboarding="connection-status"><ConnectionStatus /></div>
           </div>
         </div>
       </div>
@@ -74,7 +74,7 @@ export function Topbar({ theme, onToggleTheme, onSearchChange, onOpenPalette, on
           <NotificationsMenu />
           <ThemeToggle mode={theme} onToggle={onToggleTheme} />
         </div>
-        <ConnectionStatus compact />
+        <div data-onboarding="connection-status"><ConnectionStatus compact /></div>
       </div>
     </header>
   );

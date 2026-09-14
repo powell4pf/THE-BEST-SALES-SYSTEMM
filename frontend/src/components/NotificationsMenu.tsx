@@ -42,7 +42,7 @@ export function NotificationsMenu() {
   }
 
   return <div ref={containerRef} className="relative z-[100]">
-    <Button variant="outline" size="sm" className="relative h-10 w-10 rounded-xl px-0" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} aria-expanded={open}>
+    <Button data-onboarding="notifications" variant="outline" size="sm" className="relative h-10 w-10 rounded-xl px-0" onClick={() => setOpen((value) => !value)} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`} aria-expanded={open}>
       <Bell className="h-4 w-4" />
       {unreadCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
     </Button>
