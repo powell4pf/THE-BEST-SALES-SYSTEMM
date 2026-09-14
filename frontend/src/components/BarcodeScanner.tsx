@@ -72,7 +72,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
       const track = stream.getVideoTracks()[0];
       const capabilities = track?.getCapabilities?.() as MediaTrackCapabilities & { focusMode?: string[] } | undefined;
       if (track && capabilities?.focusMode?.includes('continuous')) {
-        await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] } as MediaTrackConstraints).catch(() => undefined);
+        await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] } as unknown as MediaTrackConstraints).catch(() => undefined);
       }
 
       const nativeDetector = (window as Window & { BarcodeDetector?: NativeBarcodeDetectorConstructor }).BarcodeDetector;
@@ -111,7 +111,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
 
       const { BrowserMultiFormatReader } = await import('@zxing/browser');
       const { BarcodeFormat, DecodeHintType } = await import('@zxing/library');
-      const hints = new Map([
+      const hints = new Map<any, any>([
         [DecodeHintType.POSSIBLE_FORMATS, [
           BarcodeFormat.EAN_13,
           BarcodeFormat.EAN_8,

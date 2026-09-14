@@ -32,6 +32,7 @@ public static class ReferenceDataSeeder
         ("deliverynotes.delete", "Delete Delivery Notes", "Can delete delivery notes"),
         ("payments.delete", "Delete Payments", "Can delete payments"),
         ("notifications.view", "View Notifications", "Can view document generation notifications"),
+        ("support.manage", "Manage Support Tickets", "Can view and manage all support tickets"),
         ("reports.view", "View Reports", "Can view reports and dashboards"),
         ("settings.manage", "Manage Settings", "Can update company and system settings"),
         ("users.manage", "Manage Users", "Can manage users and roles")
@@ -124,7 +125,7 @@ public static class ReferenceDataSeeder
         // workspace user, so keep the visible Generate Invoice action usable
         // for existing Viewer accounts as well as Sales and Accounts users.
         var nonDestructivePermissions = permissionMap.Keys
-            .Where(key => !key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) && key is not "users.manage" and not "settings.manage")
+            .Where(key => !key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) && key is not "users.manage" and not "settings.manage" and not "support.manage")
             .ToArray();
         var restrictedRoleIds = roleMap
             .Where(entry => entry.Key is not "Super Administrator" and not "Administrator" and not "CEO")
@@ -132,7 +133,7 @@ public static class ReferenceDataSeeder
             .Where(id => id != Guid.Empty)
             .ToArray();
         var restrictedPermissionIds = permissionMap
-            .Where(entry => entry.Key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) || entry.Key is "users.manage" or "settings.manage")
+            .Where(entry => entry.Key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) || entry.Key is "users.manage" or "settings.manage" or "support.manage")
             .Select(entry => entry.Value)
             .ToHashSet();
         var staleDeleteLinks = await db.AppRolePermissions

@@ -5,6 +5,7 @@ using NurturedChoice.Domain.Entities.Customers;
 using NurturedChoice.Domain.Entities.Identity;
 using NurturedChoice.Domain.Entities.Inventory;
 using NurturedChoice.Domain.Entities.Settings;
+using NurturedChoice.Domain.Entities.Support;
 using NurturedChoice.Application.Abstractions;
 
 namespace NurturedChoice.Infrastructure.Persistence;
@@ -47,6 +48,8 @@ public class SalesDbContext : DbContext, IUnitOfWork
     public DbSet<StockBalance> StockBalances => Set<StockBalance>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -125,6 +128,46 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<StockBalance>().ToTable("stock_balances");
         modelBuilder.Entity<StockMovement>().ToTable("stock_movements");
         modelBuilder.Entity<StockAdjustment>().ToTable("stock_adjustments");
+        modelBuilder.Entity<SupportTicket>().ToTable("support_tickets");
+        modelBuilder.Entity<SupportTicketMessage>().ToTable("support_ticket_messages");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.Id).HasColumnName("id");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.TicketNumber).HasColumnName("ticket_number").HasMaxLength(24);
+        modelBuilder.Entity<SupportTicket>().Property(x => x.AppUserId).HasColumnName("app_user_id");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.AssignedToId).HasColumnName("assigned_to_id");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.Subject).HasColumnName("subject").HasMaxLength(180);
+        modelBuilder.Entity<SupportTicket>().Property(x => x.Description).HasColumnName("description").HasMaxLength(5000);
+        modelBuilder.Entity<SupportTicket>().Property(x => x.Category).HasColumnName("category").HasMaxLength(40);
+        modelBuilder.Entity<SupportTicket>().Property(x => x.Priority).HasColumnName("priority").HasMaxLength(20);
+        modelBuilder.Entity<SupportTicket>().Property(x => x.Status).HasColumnName("status").HasMaxLength(30);
+        modelBuilder.Entity<SupportTicket>().Property(x => x.LastActivityAt).HasColumnName("last_activity_at");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.CreatedAt).HasColumnName("created_at");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.CreatedBy).HasColumnName("created_by");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.IsDeleted).HasColumnName("is_deleted");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
+        modelBuilder.Entity<SupportTicket>().Property(x => x.RowVersion).HasColumnName("row_version");
+        modelBuilder.Entity<SupportTicket>().HasIndex(x => x.TicketNumber).IsUnique();
+        modelBuilder.Entity<SupportTicket>().HasIndex(x => new { x.AppUserId, x.LastActivityAt });
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.Id).HasColumnName("id");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.SupportTicketId).HasColumnName("support_ticket_id");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.AppUserId).HasColumnName("app_user_id");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.Body).HasColumnName("body").HasMaxLength(5000);
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.MessageType).HasColumnName("message_type").HasMaxLength(30);
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.IsInternal).HasColumnName("is_internal");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.PreviousStatus).HasColumnName("previous_status").HasMaxLength(30);
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.NewStatus).HasColumnName("new_status").HasMaxLength(30);
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.CreatedAt).HasColumnName("created_at");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.CreatedBy).HasColumnName("created_by");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.IsDeleted).HasColumnName("is_deleted");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
+        modelBuilder.Entity<SupportTicketMessage>().Property(x => x.RowVersion).HasColumnName("row_version");
+        modelBuilder.Entity<SupportTicketMessage>().HasIndex(x => new { x.SupportTicketId, x.CreatedAt });
+        modelBuilder.Entity<SupportTicketMessage>().HasOne(x => x.SupportTicket).WithMany(x => x.Messages).HasForeignKey(x => x.SupportTicketId).OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<MonthEndReminder>().HasIndex(x => new { x.AppUserId, x.PeriodKey }).IsUnique();
         modelBuilder.Entity<MonthEndReminder>().Property(x => x.PeriodKey).HasMaxLength(7);

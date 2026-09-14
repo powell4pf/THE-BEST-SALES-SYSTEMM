@@ -370,6 +370,11 @@ export const api = {
   async listNotifications(): Promise<import('./apiTypes').NotificationDto[]> { return request('/api/v1/notifications'); },
   async markNotificationRead(id: string): Promise<void> { await request(`/api/v1/notifications/${id}/read`, { method: 'POST' }); },
   async markAllNotificationsRead(): Promise<void> { await request('/api/v1/notifications/read-all', { method: 'POST' }); },
+  async listSupportTickets(): Promise<import('./apiTypes').SupportTicketListItemDto[]> { return request('/api/v1/support/tickets'); },
+  async getSupportTicket(id: string): Promise<import('./apiTypes').SupportTicketDetailsDto> { return request(`/api/v1/support/tickets/${id}`); },
+  async createSupportTicket(requestBody: import('./apiTypes').CreateSupportTicketRequest): Promise<import('./apiTypes').SupportTicketDetailsDto> { return request('/api/v1/support/tickets', { method: 'POST', body: JSON.stringify(requestBody) }); },
+  async addSupportTicketMessage(id: string, requestBody: import('./apiTypes').AddSupportTicketMessageRequest): Promise<import('./apiTypes').SupportTicketDetailsDto> { return request(`/api/v1/support/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify(requestBody) }); },
+  async updateSupportTicket(id: string, requestBody: import('./apiTypes').UpdateSupportTicketRequest): Promise<import('./apiTypes').SupportTicketDetailsDto> { return request(`/api/v1/support/tickets/${id}`, { method: 'PUT', body: JSON.stringify(requestBody) }); },
   async getCurrentUser(): Promise<{ userId: string; email: string; displayName: string; roles: string[] }> { return request('/api/v1/auth/me'); },
   async getInvoice(id: string): Promise<InvoiceDto> {
     return request<InvoiceDto>(`/api/v1/invoices/${id}`);

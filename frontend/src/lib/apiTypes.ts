@@ -298,6 +298,52 @@ export type UpdateUserStatusRequest = { status: 'Active' | 'Inactive' | 'Archive
 export type MonthEndReminderDto = { id: string; periodKey: string; title: string; message: string; createdAt: string };
 export type NotificationDto = { id: string; documentType: string; documentId: string | null; title: string; message: string; route: string; createdAt: string; readAt: string | null };
 
+export type SupportTicketListItemDto = {
+  id: string;
+  ticketNumber: string;
+  subject: string;
+  category: string;
+  priority: string;
+  status: string;
+  submittedBy: string;
+  createdAt: string;
+  lastActivityAt: string;
+  messageCount: number;
+  lastMessage: string | null;
+};
+
+export type SupportTicketMessageDto = {
+  id: string;
+  appUserId: string;
+  author: string;
+  body: string;
+  messageType: string;
+  isInternal: boolean;
+  previousStatus: string | null;
+  newStatus: string | null;
+  createdAt: string;
+};
+
+export type SupportTicketDetailsDto = {
+  id: string;
+  ticketNumber: string;
+  subject: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  appUserId: string;
+  submittedBy: string;
+  assignedToId: string | null;
+  createdAt: string;
+  lastActivityAt: string;
+  messages: SupportTicketMessageDto[];
+};
+
+export type CreateSupportTicketRequest = { subject: string; description: string; category: string; priority: string };
+export type AddSupportTicketMessageRequest = { body: string; internal?: boolean };
+export type UpdateSupportTicketRequest = { status: string; priority: string; assignedToId?: string | null };
+
 export type DashboardSummaryDto = {
   totalSales: number;
   todaySales: number;
