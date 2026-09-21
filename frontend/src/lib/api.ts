@@ -442,6 +442,12 @@ export const api = {
       movements: dashboard.movements
     };
   },
+  async listStockMovements(page = 1, pageSize = 50): Promise<import('./apiTypes').PagedResult<import('./apiTypes').StockMovementListItemDto>> {
+    return request(`/api/v1/stock/movements?page=${page}&pageSize=${pageSize}`);
+  },
+  async createStockAdjustment(requestBody: import('./apiTypes').CreateStockAdjustmentRequest): Promise<import('./apiTypes').StockAdjustmentDto> {
+    return request('/api/v1/stock/adjustments', { method: 'POST', body: JSON.stringify(requestBody) });
+  },
   isAuthenticated(): boolean {
     const tokens = loadAuthTokens();
     return Boolean(tokens?.accessToken && !isJwtExpired(tokens.accessToken));

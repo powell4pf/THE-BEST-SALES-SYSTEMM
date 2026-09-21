@@ -403,3 +403,34 @@ export type StockMovementDto = {
   quantity: number;
   currentStock: number;
 };
+
+export type CreateStockAdjustmentRequest = {
+  productId: string;
+  adjustedQuantity: number;
+  reason: string;
+  notes: string | null;
+};
+
+export type StockAdjustmentDto = {
+  id: string;
+  productId: string;
+  productName: string;
+  previousQuantity: number;
+  adjustedQuantity: number;
+  changeQuantity: number;
+  reason: string;
+  notes: string | null;
+  createdAt: string;
+};
+
+export type StockMovementListItemDto = {
+  id: string;
+  createdAt: string;
+  productId: string;
+  productName: string;
+  movementType: string;
+  quantity: number;
+  unitCost: number;
+  sourceDocumentType: string | null;
+  notes: string | null;
+};

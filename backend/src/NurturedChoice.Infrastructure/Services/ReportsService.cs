@@ -73,7 +73,7 @@ public sealed class ReportsService : IReportsService
         }
         if (reportKey.Equals("inventory-valuation", StringComparison.OrdinalIgnoreCase))
         {
-            var source = await (from product in _db.Products.AsNoTracking() join balance in _db.StockBalances.AsNoTracking().Where(x => !x.IsDeleted) on product.Id equals balance.ProductId into balances where !product.IsDeleted let quantity = balances.Sum(x => (decimal?)x.QuantityOnHand) ?? 0m select new { product.ProductName, product.Sku, quantity, product.BuyingPrice }).ToListAsync(cancellationToken);
+            var source = await _db.Products.AsNoTracking().Where(product => !product.IsDeleted).Select(product => new { product.ProductName, product.Sku, quantity = product.CurrentStock, product.BuyingPrice }).ToListAsync(cancellationToken);
             var rows = source.Select(x => Row(("product", x.ProductName), ("sku", x.Sku), ("units", x.quantity), ("unitCost", x.BuyingPrice), ("value", x.quantity * x.BuyingPrice))).ToList();
             return Table(reportKey, "Inventory Valuation", "Current stock valued at purchase price.", [("product", "Product", "text"), ("sku", "SKU", "text"), ("units", "Units", "number"), ("unitCost", "Unit Cost", "currency"), ("value", "Value", "currency")], rows);
         }
@@ -85,7 +85,7 @@ public sealed class ReportsService : IReportsService
         }
         if (reportKey.Equals("inventory-aging", StringComparison.OrdinalIgnoreCase))
         {
-            var products = await (from product in _db.Products.AsNoTracking() join balance in _db.StockBalances.AsNoTracking().Where(x => !x.IsDeleted) on product.Id equals balance.ProductId into balances where !product.IsDeleted let quantity = balances.Sum(x => (decimal?)x.QuantityOnHand) ?? 0m select new { product.Id, product.ProductName, quantity, product.BuyingPrice }).ToListAsync(cancellationToken);
+            var products = await _db.Products.AsNoTracking().Where(product => !product.IsDeleted).Select(product => new { product.Id, product.ProductName, quantity = product.CurrentStock, product.BuyingPrice }).ToListAsync(cancellationToken);
             var lastMoves = await _db.StockMovements.AsNoTracking().Where(x => !x.IsDeleted).GroupBy(x => x.ProductId).Select(x => new { ProductId = x.Key, Last = x.Max(m => m.CreatedAt) }).ToDictionaryAsync(x => x.ProductId, x => x.Last, cancellationToken);
             var rows = products.Select(x => { var last = lastMoves.GetValueOrDefault(x.Id); return Row(("product", x.ProductName), ("units", x.quantity), ("lastMovement", last == default ? null : last.ToString("yyyy-MM-dd")), ("daysIdle", last == default ? null : Math.Max(0, (DateTime.UtcNow.Date - last.Date).Days)), ("value", x.quantity * x.BuyingPrice)); }).OrderByDescending(x => x["daysIdle"] as int?).ToList();
             return Table(reportKey, "Inventory Aging", "Stock on hand grouped by how long it has been idle.", [("product", "Product", "text"), ("units", "Units", "number"), ("lastMovement", "Last Movement", "text"), ("daysIdle", "Days Idle", "number"), ("value", "Stock Value", "currency")], rows);

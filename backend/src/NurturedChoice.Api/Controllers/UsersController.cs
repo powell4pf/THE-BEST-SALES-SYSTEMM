@@ -133,6 +133,24 @@ public sealed class UsersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    public Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
-        => UpdateStatus(id, new UpdateUserStatusRequest(nameof(RecordStatus.Archived)), cancellationToken);
+    [Permission("users.delete")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        if (!await CanDeleteUsersAsync(cancellationToken))
+        {
+            return Forbid();
+        }
+
+        return await UpdateStatus(id, new UpdateUserStatusRequest(nameof(RecordStatus.Archived)), cancellationToken);
+    }
+
+    private Task<bool> CanDeleteUsersAsync(CancellationToken cancellationToken)
+    {
+        if (_currentUser.UserId is not { } userId) return Task.FromResult(false);
+
+        return _db.AppUserRoles
+            .Where(link => link.AppUserId == userId)
+            .Join(_db.AppRoles, link => link.AppRoleId, role => role.Id, (_, role) => role.Name)
+            .AnyAsync(roleName => roleName == "Super Administrator" || roleName == "CEO" || roleName == "Administrator", cancellationToken);
+    }
 }

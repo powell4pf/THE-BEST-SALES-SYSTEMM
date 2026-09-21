@@ -80,6 +80,12 @@ public sealed class ProductService : IProductService
         };
 
         _db.Products.Add(entity);
+        _db.StockBalances.Add(new StockBalance
+        {
+            ProductId = entity.Id,
+            QuantityOnHand = entity.CurrentStock,
+            CreatedBy = userId
+        });
         if (entity.CurrentStock != 0)
         {
             _db.StockMovements.Add(new StockMovement
@@ -119,6 +125,23 @@ public sealed class ProductService : IProductService
 
         if (stockDelta != 0)
         {
+            var balance = await _db.StockBalances.FirstOrDefaultAsync(x => x.ProductId == entity.Id && x.BranchId == null && !x.IsDeleted, cancellationToken);
+            if (balance is null)
+            {
+                _db.StockBalances.Add(new StockBalance
+                {
+                    ProductId = entity.Id,
+                    QuantityOnHand = request.CurrentStock,
+                    CreatedBy = userId
+                });
+            }
+            else
+            {
+                balance.QuantityOnHand = request.CurrentStock;
+                balance.LastReconciledAt = DateTime.UtcNow;
+                balance.UpdatedBy = userId;
+                balance.UpdatedAt = DateTime.UtcNow;
+            }
             _db.StockMovements.Add(new StockMovement
             {
                 ProductId = entity.Id,

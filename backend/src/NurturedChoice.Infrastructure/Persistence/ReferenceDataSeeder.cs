@@ -35,7 +35,8 @@ public static class ReferenceDataSeeder
         ("support.manage", "Manage Support Tickets", "Can view and manage all support tickets"),
         ("reports.view", "View Reports", "Can view reports and dashboards"),
         ("settings.manage", "Manage Settings", "Can update company and system settings"),
-        ("users.manage", "Manage Users", "Can manage users and roles")
+        ("users.manage", "Manage Users", "Can manage users and roles"),
+        ("users.delete", "Delete Users", "Can archive unwanted user accounts")
     ];
 
     private static readonly string[] Roles =
