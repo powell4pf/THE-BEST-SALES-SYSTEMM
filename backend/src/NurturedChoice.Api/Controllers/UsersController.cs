@@ -37,6 +37,16 @@ public sealed class UsersController : ControllerBase
         return users.Select(user => new UserRoleDto(user.Id, user.Email, user.DisplayName, user.Roles, user.Status.ToString(), user.LastLoginAt)).ToList();
     }
 
+    [HttpGet("audit-log")]
+    public async Task<IReadOnlyList<SecurityAuditLogDto>> GetAuditLog(CancellationToken cancellationToken)
+    {
+        return await _db.SecurityAuditLogs.AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(250)
+            .Select(x => new SecurityAuditLogDto(x.Id, x.UserId, x.TargetUserId, x.EventType, x.Email, x.IpAddress, x.UserAgent, x.Details, x.Succeeded, x.CreatedAt))
+            .ToListAsync(cancellationToken);
+    }
+
     [HttpPut("{id:guid}/role")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateUserRoleRequest request, CancellationToken cancellationToken)
     {
@@ -72,8 +82,11 @@ public sealed class UsersController : ControllerBase
         if (user is null) return NotFound();
 
         var existingRoles = await _db.AppUserRoles.Where(link => link.AppUserId == id).ToListAsync(cancellationToken);
+        var previousRole = await _db.AppUserRoles.Where(link => link.AppUserId == id).Join(_db.AppRoles, link => link.AppRoleId, existingRole => existingRole.Id, (_, existingRole) => existingRole.Name).FirstOrDefaultAsync(cancellationToken);
         _db.AppUserRoles.RemoveRange(existingRoles);
         _db.AppUserRoles.Add(new AppUserRole { AppUserId = id, AppRoleId = role.Id });
+        await _db.SaveChangesAsync(cancellationToken);
+        AddAudit(user.Id, "RoleChanged", user.Email, $"Role changed from {previousRole ?? "none"} to {role.Name}.", true);
         await _db.SaveChangesAsync(cancellationToken);
         await _notifications.CreateAsync(user.Id, "User", user.Id, "User role changed", $"Your system role is now {role.Name}.", "/settings", cancellationToken);
         return NoContent();
@@ -112,6 +125,7 @@ public sealed class UsersController : ControllerBase
             }
         }
 
+        var previousStatus = user.Status;
         user.Status = nextStatus;
         user.IsDeleted = nextStatus == RecordStatus.Archived;
         user.UpdatedAt = DateTime.UtcNow;
@@ -130,7 +144,25 @@ public sealed class UsersController : ControllerBase
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+        AddAudit(user.Id, nextStatus == RecordStatus.Archived ? "UserDeleted" : "UserStatusChanged", user.Email, $"Status changed from {previousStatus} to {nextStatus}.", true);
+        await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
+    }
+
+    private void AddAudit(Guid targetUserId, string eventType, string email, string details, bool succeeded)
+    {
+        _db.SecurityAuditLogs.Add(new SecurityAuditLog
+        {
+            UserId = _currentUser.UserId,
+            TargetUserId = targetUserId,
+            EventType = eventType,
+            Email = email,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = Request.Headers.UserAgent.ToString(),
+            Details = details,
+            Succeeded = succeeded,
+            CreatedAt = DateTime.UtcNow
+        });
     }
 
     [HttpDelete("{id:guid}")]

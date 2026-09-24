@@ -362,6 +362,7 @@ export const api = {
   async updateInvoiceNumberSettings(requestBody: import('./apiTypes').UpdateInvoiceNumberSettingsRequest): Promise<import('./apiTypes').InvoiceNumberSettingsDto> { return request('/api/v1/settings/invoice-number', { method: 'PUT', body: JSON.stringify(requestBody) }); },
   async getSystemSettings(): Promise<import('./apiTypes').SystemSettingDto[]> { return request('/api/v1/settings/system'); },
   async listUsers(): Promise<import('./apiTypes').UserRoleDto[]> { return request('/api/v1/users'); },
+  async listAuditLogs(): Promise<import('./apiTypes').SecurityAuditLogDto[]> { return request('/api/v1/users/audit-log'); },
   async updateUserRole(id: string, requestBody: import('./apiTypes').UpdateUserRoleRequest): Promise<void> { await request(`/api/v1/users/${id}/role`, { method: 'PUT', body: JSON.stringify(requestBody) }); },
   async updateUserStatus(id: string, requestBody: import('./apiTypes').UpdateUserStatusRequest): Promise<void> { await request(`/api/v1/users/${id}/status`, { method: 'PUT', body: JSON.stringify(requestBody) }); },
   async deleteUser(id: string): Promise<void> { await request(`/api/v1/users/${id}`, { method: 'DELETE' }); },

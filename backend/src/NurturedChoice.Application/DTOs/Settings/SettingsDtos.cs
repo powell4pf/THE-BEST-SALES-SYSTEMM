@@ -8,3 +8,4 @@ public sealed record UserRoleDto(Guid Id, string Email, string DisplayName, IRea
 
 public sealed record UpdateUserRoleRequest(string Role);
 public sealed record UpdateUserStatusRequest(string Status);
+public sealed record SecurityAuditLogDto(Guid Id, Guid? UserId, Guid? TargetUserId, string EventType, string? Email, string? IpAddress, string? UserAgent, string? Details, bool Succeeded, DateTime CreatedAt);

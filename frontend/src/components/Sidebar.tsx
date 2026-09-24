@@ -1,8 +1,9 @@
-import { BarChart3, Boxes, ClipboardCheck, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins, X, RefreshCw, Activity, LifeBuoy } from 'lucide-react';
+import { BarChart3, Boxes, ClipboardCheck, CreditCard, FileText, LayoutDashboard, PackageSearch, Settings, ShoppingCart, ShieldCheck, Users, WalletCards, HandCoins, X, RefreshCw, Activity, LifeBuoy, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Button } from './ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { hasFullAdministrativeAccess, useAuth } from '../context/AuthContext';
 
 type Props = {
   currentPath: string;
@@ -29,11 +30,13 @@ const navigation = [
   { label: 'Offline Sync', path: '/offline-sync', icon: RefreshCw },
   { label: 'System Health', path: '/system-health', icon: Activity },
   { label: 'Help & Support', path: '/support', icon: LifeBuoy },
+  { label: 'Audit Log', path: '/audit-log', icon: ShieldAlert, adminOnly: true },
   { label: 'Settings', path: '/settings', icon: Settings }
 ];
 
 export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed, onClose, className }: Props) {
   const summaryQuery = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: api.getDashboardSummary, refetchInterval: 60000, staleTime: 30000 });
+  const auth = useAuth();
   const todaySales = summaryQuery.data?.todaySales ?? 0;
   const money = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 });
 
@@ -53,7 +56,7 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
       </div>
 
       <nav className="flex-1 space-y-1 pr-1" data-onboarding="navigation">
-        {navigation.map((item) => {
+        {navigation.filter((item) => !item.adminOnly || hasFullAdministrativeAccess(auth.user?.roles ?? [])).map((item) => {
           const Icon = item.icon;
           const active = currentPath === item.path;
           return (

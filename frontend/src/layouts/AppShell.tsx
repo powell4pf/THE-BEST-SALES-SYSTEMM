@@ -78,6 +78,7 @@ export function AppShell({ children }: Props) {
       '/reports': 'Reports',
       '/portal': 'Customer Portal',
       '/settings': 'Settings',
+      '/audit-log': 'Audit Log',
       '/offline-sync': 'Offline Sync',
       '/system-health': 'System Health',
       '/support': 'Help & Support'

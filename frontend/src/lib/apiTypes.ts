@@ -294,6 +294,7 @@ export type InvoiceNumberSettingsDto = { prefix: string; startingNumber: number;
 export type UpdateInvoiceNumberSettingsRequest = InvoiceNumberSettingsDto;
 export type SystemSettingDto = { key: string; value: string; description: string | null };
 export type UserRoleDto = { id: string; email: string; displayName: string; roles: string[]; status: string; lastLoginAt: string | null };
+export type SecurityAuditLogDto = { id: string; userId: string | null; targetUserId: string | null; eventType: string; email: string | null; ipAddress: string | null; userAgent: string | null; details: string | null; succeeded: boolean; createdAt: string };
 export type UpdateUserRoleRequest = { role: string };
 export type UpdateUserStatusRequest = { status: 'Active' | 'Inactive' | 'Archived' };
 export type MonthEndReminderDto = { id: string; periodKey: string; title: string; message: string; createdAt: string };

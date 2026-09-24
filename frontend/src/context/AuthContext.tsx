@@ -58,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null); setToken(null);
   }, []);
 
+  const expireSession = useCallback(() => {
+    const refreshToken = loadAuthTokens()?.refreshToken;
+    clearSession();
+    if (refreshToken) void api.logout(refreshToken).catch(() => undefined);
+  }, [clearSession]);
+
   useEffect(() => {
     const tokens = loadAuthTokens();
     if (tokens?.accessToken && !isJwtExpired(tokens.accessToken)) {
@@ -79,11 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) return;
 
     const expireIfIdle = () => {
-      if (lastActivityIsExpired()) clearSession();
+      if (lastActivityIsExpired()) expireSession();
     };
     const handleActivity = () => {
       if (!lastActivityIsExpired()) recordLastActivity();
-      else clearSession();
+      else expireSession();
     };
     const activityEvents = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'] as const;
 
@@ -93,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('focus', expireIfIdle);
     window.addEventListener('pageshow', expireIfIdle);
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === LAST_ACTIVITY_KEY && event.newValue === null) clearSession();
+      if (event.key === LAST_ACTIVITY_KEY && event.newValue === null) expireSession();
     };
     window.addEventListener('storage', handleStorage);
     document.addEventListener('visibilitychange', expireIfIdle);
@@ -107,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', expireIfIdle);
       window.clearInterval(timer);
     };
-  }, [token, clearSession]);
+  }, [token, expireSession]);
 
   const completeLogin = useCallback((response: AuthResponse) => { const nextUser = saveAuthResponse(response); setToken(response.accessToken); setUser(nextUser); }, []);
   const loginWithPassword = useCallback(async (email: string, password: string) => completeLogin(await api.loginPassword({ email, password })), [completeLogin]);

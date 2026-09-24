@@ -45,6 +45,7 @@ public class SalesDbContext : DbContext, IUnitOfWork
     public DbSet<AppUserRole> AppUserRoles => Set<AppUserRole>();
     public DbSet<AppRolePermission> AppRolePermissions => Set<AppRolePermission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
     public DbSet<StockBalance> StockBalances => Set<StockBalance>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
@@ -126,6 +127,19 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<AppUserRole>().ToTable("app_user_roles");
         modelBuilder.Entity<AppRolePermission>().ToTable("app_role_permissions");
         modelBuilder.Entity<RefreshToken>().ToTable("refresh_tokens");
+        modelBuilder.Entity<SecurityAuditLog>().ToTable("security_audit_logs");
+        modelBuilder.Entity<SecurityAuditLog>().Ignore(x => x.RowVersion);
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.Id).HasColumnName("id");
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.UserId).HasColumnName("user_id");
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.TargetUserId).HasColumnName("target_user_id");
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.EventType).HasColumnName("event_type").HasMaxLength(60);
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.Email).HasColumnName("email").HasMaxLength(150);
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.IpAddress).HasColumnName("ip_address").HasMaxLength(80);
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.UserAgent).HasColumnName("user_agent").HasMaxLength(500);
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.Details).HasColumnName("details").HasMaxLength(1000);
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.Succeeded).HasColumnName("succeeded");
+        modelBuilder.Entity<SecurityAuditLog>().Property(x => x.CreatedAt).HasColumnName("created_at");
+        modelBuilder.Entity<SecurityAuditLog>().HasIndex(x => x.CreatedAt);
         modelBuilder.Entity<StockBalance>().ToTable("stock_balances");
         modelBuilder.Entity<StockMovement>().ToTable("stock_movements");
         modelBuilder.Entity<StockAdjustment>().ToTable("stock_adjustments");

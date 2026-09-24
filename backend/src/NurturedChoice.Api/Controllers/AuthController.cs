@@ -27,14 +27,14 @@ public sealed class AuthController : ControllerBase
     [HttpPost("google")]
     public async Task<ActionResult<AuthResponse>> GoogleSignIn([FromBody] GoogleSignInRequest request, CancellationToken cancellationToken)
     {
-        var result = await _authService.SignInWithGoogleAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+        var result = await _authService.SignInWithGoogleAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), cancellationToken);
         return result is null ? Unauthorized() : Ok(result);
     }
 
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var result = await _authService.SignInWithPasswordAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+        var result = await _authService.SignInWithPasswordAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), cancellationToken);
         return result is null ? Unauthorized() : Ok(result);
     }
 
@@ -46,7 +46,7 @@ public sealed class AuthController : ControllerBase
             return BadRequest(new { title = "Passwords do not match." });
         }
 
-        var result = await _authService.RegisterAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+        var result = await _authService.RegisterAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), cancellationToken);
         return result is null ? Conflict(new { title = "An account with that email already exists." }) : Ok(result);
     }
 
@@ -60,7 +60,7 @@ public sealed class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] string refreshToken, CancellationToken cancellationToken)
     {
-        await _authService.LogoutAsync(refreshToken, cancellationToken);
+        await _authService.LogoutAsync(refreshToken, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), cancellationToken);
         return NoContent();
     }
 

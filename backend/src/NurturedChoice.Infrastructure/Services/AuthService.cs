@@ -10,20 +10,24 @@ namespace NurturedChoice.Infrastructure.Services;
 
 public sealed class AuthService : IAuthService
 {
+    private const int MaxFailedLoginAttempts = 5;
+    private static readonly TimeSpan AccountLockDuration = TimeSpan.FromMinutes(15);
     private readonly SalesDbContext _db;
     private readonly TokenService _tokens;
     private readonly GoogleTokenService _googleTokens;
     private readonly IPasswordHashService _passwordHasher;
+    private readonly INotificationService _notifications;
 
-    public AuthService(SalesDbContext db, TokenService tokens, GoogleTokenService googleTokens, IPasswordHashService passwordHasher)
+    public AuthService(SalesDbContext db, TokenService tokens, GoogleTokenService googleTokens, IPasswordHashService passwordHasher, INotificationService notifications)
     {
         _db = db;
         _tokens = tokens;
         _googleTokens = googleTokens;
         _passwordHasher = passwordHasher;
+        _notifications = notifications;
     }
 
-    public async Task<AuthResponse?> SignInWithGoogleAsync(GoogleSignInRequest request, string? ipAddress, CancellationToken cancellationToken = default)
+    public async Task<AuthResponse?> SignInWithGoogleAsync(GoogleSignInRequest request, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default)
     {
         var identity = await _googleTokens.ValidateAsync(request.IdToken, cancellationToken);
         var user = await _db.AppUsers.FirstOrDefaultAsync(
@@ -60,6 +64,9 @@ public sealed class AuthService : IAuthService
 
         var roles = await ResolveRolesAsync(user, null, cancellationToken);
         user.LastLoginAt = DateTime.UtcNow;
+        user.FailedLoginAttempts = 0;
+        user.LockedUntil = null;
+        AddAudit(user.Id, user.Id, "LoginSucceeded", user.Email, ipAddress, userAgent, "Google sign-in succeeded.", true);
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
 
@@ -75,17 +82,41 @@ public sealed class AuthService : IAuthService
         return new AuthResponse(accessToken.Token, refreshToken, accessToken.ExpiresAtUtc, user.Id, user.Email, user.DisplayName, roles);
     }
 
-    public async Task<AuthResponse?> SignInWithPasswordAsync(LoginRequest request, string? ipAddress, CancellationToken cancellationToken = default)
+    public async Task<AuthResponse?> SignInWithPasswordAsync(LoginRequest request, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await _db.AppUsers.FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
-        if (user is null || user.Status != RecordStatus.Active || string.IsNullOrWhiteSpace(user.PasswordHash) || !_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password))
+        var now = DateTime.UtcNow;
+        if (user is null)
         {
+            AddAudit(null, null, "LoginFailed", email, ipAddress, userAgent, "Invalid email or password.", false);
+            await _db.SaveChangesAsync(cancellationToken);
+            return null;
+        }
+
+        if (user.LockedUntil > now)
+        {
+            AddAudit(user.Id, user.Id, "LoginFailed", user.Email, ipAddress, userAgent, $"Account is locked until {user.LockedUntil:O}.", false);
+            await _db.SaveChangesAsync(cancellationToken);
+            return null;
+        }
+
+        if (user.Status != RecordStatus.Active || string.IsNullOrWhiteSpace(user.PasswordHash) || !_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password))
+        {
+            user.FailedLoginAttempts++;
+            var locked = user.FailedLoginAttempts >= MaxFailedLoginAttempts;
+            if (locked) user.LockedUntil = now.Add(AccountLockDuration);
+            AddAudit(user.Id, user.Id, "LoginFailed", user.Email, ipAddress, userAgent, locked ? "Account locked after repeated failed login attempts." : "Invalid email or password.", false);
+            await _db.SaveChangesAsync(cancellationToken);
+            if (locked) await NotifySecurityAdministratorsAsync(user, ipAddress, cancellationToken);
             return null;
         }
 
         var roles = await ResolveRolesAsync(user, null, cancellationToken);
-        user.LastLoginAt = DateTime.UtcNow;
+        user.LastLoginAt = now;
+        user.FailedLoginAttempts = 0;
+        user.LockedUntil = null;
+        AddAudit(user.Id, user.Id, "LoginSucceeded", user.Email, ipAddress, userAgent, "Password sign-in succeeded.", true);
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
 
@@ -101,7 +132,7 @@ public sealed class AuthService : IAuthService
         return new AuthResponse(accessToken.Token, refreshToken, accessToken.ExpiresAtUtc, user.Id, user.Email, user.DisplayName, roles);
     }
 
-    public async Task<AuthResponse?> RegisterAsync(RegisterRequest request, string? ipAddress, CancellationToken cancellationToken = default)
+    public async Task<AuthResponse?> RegisterAsync(RegisterRequest request, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
         if (await _db.AppUsers.AnyAsync(x => x.Email == email, cancellationToken))
@@ -123,6 +154,7 @@ public sealed class AuthService : IAuthService
 
         var roles = await ResolveRolesAsync(user, "Viewer", cancellationToken);
         user.LastLoginAt = DateTime.UtcNow;
+        AddAudit(user.Id, user.Id, "UserRegistered", user.Email, ipAddress, userAgent, "User registered and signed in.", true);
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
         _db.RefreshTokens.Add(new RefreshToken
@@ -169,14 +201,54 @@ public sealed class AuthService : IAuthService
         return new AuthResponse(accessToken.Token, nextRefreshToken, accessToken.ExpiresAtUtc, user.Id, user.Email, user.DisplayName, roles);
     }
 
-    public async Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
+    public async Task<bool> LogoutAsync(string refreshToken, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default)
     {
         var token = await _db.RefreshTokens.FirstOrDefaultAsync(x => x.Token == refreshToken, cancellationToken);
         if (token is null) return false;
 
         token.RevokedAt = DateTime.UtcNow;
+        var user = await _db.AppUsers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == token.AppUserId, cancellationToken);
+        AddAudit(token.AppUserId, token.AppUserId, "Logout", user?.Email, ipAddress, userAgent, "User signed out.", true);
         await _db.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private void AddAudit(Guid? userId, Guid? targetUserId, string eventType, string? email, string? ipAddress, string? userAgent, string? details, bool succeeded)
+    {
+        _db.SecurityAuditLogs.Add(new SecurityAuditLog
+        {
+            UserId = userId,
+            TargetUserId = targetUserId,
+            EventType = eventType,
+            Email = email,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            Details = details,
+            Succeeded = succeeded,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+
+    private async Task NotifySecurityAdministratorsAsync(AppUser lockedUser, string? ipAddress, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var recipients = await _db.AppUserRoles.AsNoTracking()
+                .Join(_db.AppRoles.AsNoTracking(), link => link.AppRoleId, role => role.Id, (link, role) => new { link.AppUserId, role.Name })
+                .Where(x => x.Name == "Super Administrator" || x.Name == "Administrator" || x.Name == "CEO")
+                .Join(_db.AppUsers.AsNoTracking().Where(user => user.Status == RecordStatus.Active && !user.IsDeleted), x => x.AppUserId, user => user.Id, (x, user) => user.Id)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            foreach (var recipient in recipients)
+            {
+                await _notifications.CreateAsync(recipient, "Security", lockedUser.Id, "User account locked", $"{lockedUser.Email} was locked after repeated failed login attempts from {ipAddress ?? "an unknown address"}.", "/audit-log", cancellationToken);
+            }
+        }
+        catch
+        {
+            // A notification failure must not turn a failed login into a server error.
+        }
     }
 
     private async Task<IReadOnlyList<string>> ResolveRolesAsync(AppUser user, string? requestedRole, CancellationToken cancellationToken)

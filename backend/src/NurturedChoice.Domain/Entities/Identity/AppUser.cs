@@ -19,6 +19,10 @@ public class AppUser : AuditableEntity
 
     public DateTime? LastLoginAt { get; set; }
 
+    public int FailedLoginAttempts { get; set; }
+
+    public DateTime? LockedUntil { get; set; }
+
     public RecordStatus Status { get; set; } = RecordStatus.Active;
 
     public ICollection<AppUserRole> UserRoles { get; set; } = new List<AppUserRole>();

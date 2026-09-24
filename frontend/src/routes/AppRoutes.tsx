@@ -14,6 +14,7 @@ const DeliveryNotesPage = lazy(() => import('../pages/DeliveryNotesPage').then((
 const ReportsPage = lazy(() => import('../pages/ReportsPage').then((module) => ({ default: module.ReportsPage })));
 const PortalPage = lazy(() => import('../pages/PortalPage').then((module) => ({ default: module.PortalPage })));
 const SettingsPage = lazy(() => import('../pages/SettingsPage').then((module) => ({ default: module.SettingsPage })));
+const AuditLogPage = lazy(() => import('../pages/AuditLogPage').then((module) => ({ default: module.AuditLogPage })));
 const PaymentsPage = lazy(() => import('../pages/PaymentsPage').then((module) => ({ default: module.PaymentsPage })));
 const CollectionsPage = lazy(() => import('../pages/CollectionsPage').then((module) => ({ default: module.CollectionsPage })));
 const LoginPage = lazy(() => import('../pages/LoginPage').then((module) => ({ default: module.LoginPage })));
@@ -50,6 +51,7 @@ export function AppRoutes() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/portal" element={<PortalPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/audit-log" element={<AuditLogPage />} />
         <Route path="/offline-sync" element={<OfflineSyncPage />} />
         <Route path="/system-health" element={<SystemHealthPage />} />
         <Route path="/support" element={<SupportPage />} />
