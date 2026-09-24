@@ -18,9 +18,23 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 const USER_KEY = 'nurtured-choice.user';
+const LAST_ACTIVITY_KEY = 'nurtured-choice.last-activity-at';
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+
+function recordLastActivity(): void {
+  window.localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+}
+
+function lastActivityIsExpired(): boolean {
+  const raw = window.localStorage.getItem(LAST_ACTIVITY_KEY);
+  if (!raw) return false;
+  const lastActivity = Number(raw);
+  return !Number.isFinite(lastActivity) || Date.now() - lastActivity >= IDLE_TIMEOUT_MS;
+}
 
 function saveAuthResponse(response: AuthResponse) {
   saveAuthTokens({ accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAtUtc: response.expiresAtUtc });
+  recordLastActivity();
   const user = { id: response.userId, displayName: response.displayName, email: response.email, roles: response.roles ?? [] };
   window.localStorage.setItem(USER_KEY, JSON.stringify(user));
   return user;
@@ -38,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearSession = useCallback(() => {
     clearAuthTokens();
     window.localStorage.removeItem(USER_KEY);
+    window.localStorage.removeItem(LAST_ACTIVITY_KEY);
     window.localStorage.removeItem('authToken');
     window.localStorage.removeItem('authUser');
     setUser(null); setToken(null);
@@ -59,6 +74,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(false);
   }, [clearSession]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const expireIfIdle = () => {
+      if (lastActivityIsExpired()) clearSession();
+    };
+    const handleActivity = () => {
+      if (!lastActivityIsExpired()) recordLastActivity();
+      else clearSession();
+    };
+    const activityEvents = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'] as const;
+
+    if (!window.localStorage.getItem(LAST_ACTIVITY_KEY)) recordLastActivity();
+    expireIfIdle();
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, handleActivity, { passive: true }));
+    window.addEventListener('focus', expireIfIdle);
+    window.addEventListener('pageshow', expireIfIdle);
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === LAST_ACTIVITY_KEY && event.newValue === null) clearSession();
+    };
+    window.addEventListener('storage', handleStorage);
+    document.addEventListener('visibilitychange', expireIfIdle);
+    const timer = window.setInterval(expireIfIdle, 30_000);
+
+    return () => {
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      window.removeEventListener('focus', expireIfIdle);
+      window.removeEventListener('pageshow', expireIfIdle);
+      window.removeEventListener('storage', handleStorage);
+      document.removeEventListener('visibilitychange', expireIfIdle);
+      window.clearInterval(timer);
+    };
+  }, [token, clearSession]);
 
   const completeLogin = useCallback((response: AuthResponse) => { const nextUser = saveAuthResponse(response); setToken(response.accessToken); setUser(nextUser); }, []);
   const loginWithPassword = useCallback(async (email: string, password: string) => completeLogin(await api.loginPassword({ email, password })), [completeLogin]);

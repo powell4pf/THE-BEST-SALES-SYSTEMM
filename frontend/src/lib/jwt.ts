@@ -4,6 +4,7 @@ export type JwtPayload = {
   name?: string;
   role?: string | string[];
   exp?: number;
+  iat?: number;
 };
 
 export function decodeJwt(token: string): JwtPayload | null {
@@ -24,4 +25,3 @@ export function isJwtExpired(token: string): boolean {
   if (!payload?.exp) return true;
   return payload.exp * 1000 <= Date.now() + 15_000;
 }
-
