@@ -10,4 +10,5 @@ public sealed record UpdateParentGroupRequest(
     [MaxLength(300)] string? Address,
     [MaxLength(50)] string? KraPin,
     decimal CreditLimit,
+    [MaxLength(40)] string? Status,
     IReadOnlyList<UpdateBranchRequest>? Branches = null);

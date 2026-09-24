@@ -17,6 +17,20 @@ public sealed class ParentGroupService : IParentGroupService
         _db = db;
     }
 
+    private static string StatusLabel(RecordStatus status) => status switch
+    {
+        RecordStatus.CreditHold => "Credit Hold",
+        _ => status.ToString()
+    };
+
+    private static RecordStatus ParseStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return RecordStatus.Active;
+        if (status.Equals("Credit Hold", StringComparison.OrdinalIgnoreCase) || status.Equals("CreditHold", StringComparison.OrdinalIgnoreCase)) return RecordStatus.CreditHold;
+        if (Enum.TryParse<RecordStatus>(status, true, out var parsed) && parsed is RecordStatus.Active or RecordStatus.Inactive or RecordStatus.CreditHold) return parsed;
+        throw new ArgumentException("Choose Active, Credit Hold, or Inactive for the customer status.", nameof(status));
+    }
+
     public async Task<PagedResult<ParentGroupListItemDto>> GetAsync(PagedRequest request, CancellationToken cancellationToken = default)
     {
         var query = _db.ParentGroups
@@ -45,7 +59,7 @@ public sealed class ParentGroupService : IParentGroupService
                 x.Email,
                 x.Phone,
                 x.CreditLimit,
-                x.Status.ToString(),
+                x.Status == RecordStatus.CreditHold ? "Credit Hold" : x.Status == RecordStatus.Inactive ? "Inactive" : "Active",
                 x.Branches.Count(branch => !branch.IsDeleted),
                 x.Address,
                 x.Branches.Where(branch => !branch.IsDeleted).OrderBy(branch => branch.BranchName).Select(branch => new BranchDto(branch.Id, branch.ParentGroupId, branch.BranchName, branch.Address, branch.ContactPerson, branch.Email, branch.Phone)).ToList()))
@@ -72,7 +86,7 @@ public sealed class ParentGroupService : IParentGroupService
                 entity.Address,
                 entity.KraPin,
                 entity.CreditLimit,
-                entity.Status.ToString(),
+                StatusLabel(entity.Status),
                 entity.Branches
                     .OrderBy(x => x.BranchName)
                     .Select(x => new BranchDto(x.Id, x.ParentGroupId, x.BranchName, x.Address, x.ContactPerson, x.Email, x.Phone))
@@ -90,7 +104,7 @@ public sealed class ParentGroupService : IParentGroupService
             Address = request.Address?.Trim(),
             KraPin = request.KraPin?.Trim(),
             CreditLimit = request.CreditLimit,
-            Status = RecordStatus.Active,
+            Status = ParseStatus(request.Status),
             CreatedBy = userId
         };
 
@@ -131,6 +145,7 @@ public sealed class ParentGroupService : IParentGroupService
         entity.Address = request.Address?.Trim();
         entity.KraPin = request.KraPin?.Trim();
         entity.CreditLimit = request.CreditLimit;
+        entity.Status = ParseStatus(request.Status);
         entity.UpdatedBy = userId;
 
         if (request.Branches is not null)

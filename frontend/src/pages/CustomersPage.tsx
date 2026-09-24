@@ -48,7 +48,7 @@ function toCustomerFormValues(account: ParentGroupDetailsDto): CustomerFormValue
     address: account.address ?? '',
     kraPin: account.kraPin ?? '',
     creditLimit: String(account.creditLimit),
-    status: account.status === 'Inactive' ? 'Inactive' : 'Active',
+    status: account.status === 'Credit Hold' ? 'Credit Hold' : account.status === 'Inactive' ? 'Inactive' : 'Active',
     branches: account.branches.map((branch) => ({
       id: branch.id,
       branchName: branch.branchName,
@@ -69,6 +69,7 @@ function toRequest(values: CustomerFormValues): CreateParentGroupRequest {
     address: values.address.trim(),
     kraPin: values.kraPin.trim(),
     creditLimit: Number(values.creditLimit),
+    status: values.status,
     branches: values.branches.map((branch) => ({
       id: branch.id,
       branchName: branch.branchName.trim(),

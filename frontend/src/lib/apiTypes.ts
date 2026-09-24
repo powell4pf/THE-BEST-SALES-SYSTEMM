@@ -89,6 +89,7 @@ export type CreateParentGroupRequest = {
   address?: string | null;
   kraPin?: string | null;
   creditLimit: number;
+  status: 'Active' | 'Credit Hold' | 'Inactive';
   branches?: CreateBranchRequest[];
 };
 
