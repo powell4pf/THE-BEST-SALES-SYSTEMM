@@ -120,6 +120,7 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<Notification>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
         modelBuilder.Entity<Notification>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
         modelBuilder.Entity<AppUser>().ToTable("app_users");
+        modelBuilder.Entity<AppUser>().Property(x => x.LastLoginAt).HasColumnName(_useSnakeCase ? "last_login_at" : "LastLoginAt");
         modelBuilder.Entity<AppRole>().ToTable("app_roles");
         modelBuilder.Entity<AppPermission>().ToTable("app_permissions");
         modelBuilder.Entity<AppUserRole>().ToTable("app_user_roles");

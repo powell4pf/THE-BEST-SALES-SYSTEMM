@@ -59,6 +59,7 @@ public sealed class AuthService : IAuthService
         }
 
         var roles = await ResolveRolesAsync(user, null, cancellationToken);
+        user.LastLoginAt = DateTime.UtcNow;
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
 
@@ -84,6 +85,7 @@ public sealed class AuthService : IAuthService
         }
 
         var roles = await ResolveRolesAsync(user, null, cancellationToken);
+        user.LastLoginAt = DateTime.UtcNow;
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
 
@@ -120,6 +122,7 @@ public sealed class AuthService : IAuthService
         _db.AppUsers.Add(user);
 
         var roles = await ResolveRolesAsync(user, "Viewer", cancellationToken);
+        user.LastLoginAt = DateTime.UtcNow;
         var accessToken = _tokens.CreateAccessToken(user, roles);
         var refreshToken = _tokens.CreateRefreshToken();
         _db.RefreshTokens.Add(new RefreshToken

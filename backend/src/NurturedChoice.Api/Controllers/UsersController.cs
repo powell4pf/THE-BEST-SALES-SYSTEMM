@@ -27,13 +27,14 @@ public sealed class UsersController : ControllerBase
                 user.Email,
                 user.DisplayName,
                 user.Status,
+                user.LastLoginAt,
                 Roles = _db.AppUserRoles.Where(link => link.AppUserId == user.Id)
                     .Join(_db.AppRoles, link => link.AppRoleId, role => role.Id, (_, role) => role.Name)
                     .ToList()
             })
             .ToListAsync(cancellationToken);
 
-        return users.Select(user => new UserRoleDto(user.Id, user.Email, user.DisplayName, user.Roles, user.Status.ToString())).ToList();
+        return users.Select(user => new UserRoleDto(user.Id, user.Email, user.DisplayName, user.Roles, user.Status.ToString(), user.LastLoginAt)).ToList();
     }
 
     [HttpPut("{id:guid}/role")]

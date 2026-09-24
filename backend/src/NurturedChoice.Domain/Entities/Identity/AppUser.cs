@@ -17,10 +17,11 @@ public class AppUser : AuditableEntity
 
     public bool IsEmailVerified { get; set; }
 
+    public DateTime? LastLoginAt { get; set; }
+
     public RecordStatus Status { get; set; } = RecordStatus.Active;
 
     public ICollection<AppUserRole> UserRoles { get; set; } = new List<AppUserRole>();
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }
-
