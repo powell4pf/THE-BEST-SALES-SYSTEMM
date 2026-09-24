@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nurtured-choice-shell-v7';
+const CACHE_NAME = 'nurtured-choice-shell-v8';
 const CACHE_PREFIX = 'nurtured-choice-shell-';
 
 self.addEventListener('install', (event) => event.waitUntil(self.skipWaiting()));
@@ -16,7 +16,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).then((response) => {
+    event.respondWith(fetch(request, { cache: 'no-store' }).then((response) => {
       const copy = response.clone();
       void caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
       return response;
@@ -25,14 +25,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (['script', 'style', 'image', 'font'].includes(request.destination)) {
-    event.respondWith(caches.match(request).then(async (cached) => {
-      if (cached) return cached;
-      const response = await fetch(request);
-      if (response.ok) {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, response.clone());
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request, { cache: 'no-store' });
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, response.clone());
+        }
+        return response;
+      } catch {
+        return (await caches.match(request)) || Response.error();
       }
-      return response;
-    }));
+    })());
   }
 });

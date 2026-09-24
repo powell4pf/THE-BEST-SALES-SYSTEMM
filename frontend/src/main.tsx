@@ -19,7 +19,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       if (reloadForUpdate || navigator.serviceWorker.controller) window.location.reload();
     });
 
-    void navigator.serviceWorker.register('/service-worker.js?v=7', { updateViaCache: 'none' }).then((registration) => {
+    void navigator.serviceWorker.register('/service-worker.js?v=8', { updateViaCache: 'none' }).then((registration) => {
       if (registration.waiting && navigator.serviceWorker.controller) announceUpdate(registration);
       const checkForUpdate = () => { void registration.update().catch(() => undefined); };
       checkForUpdate();
@@ -42,7 +42,8 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       }, { once: true });
     }).catch(() => {
       // The application remains fully usable when a browser blocks service workers.
-    });
+      });
+      window.setTimeout(() => sessionStorage.removeItem('nurtured-choice.chunk-recovery'), 15_000);
   });
 }
 

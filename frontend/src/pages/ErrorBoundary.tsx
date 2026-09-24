@@ -25,6 +25,13 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error caught by ErrorBoundary:", error, errorInfo);
+    if (/dynamically imported module|importing a module script failed|loading chunk/i.test(error.message) && !sessionStorage.getItem('nurtured-choice.chunk-recovery')) {
+      sessionStorage.setItem('nurtured-choice.chunk-recovery', '1');
+      void Promise.all([
+        'serviceWorker' in navigator ? navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(registrations.map((registration) => registration.unregister()))) : Promise.resolve(),
+        'caches' in window ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))) : Promise.resolve()
+      ]).finally(() => window.location.reload());
+    }
     this.setState({
       error: error,
       errorInfo: errorInfo,
