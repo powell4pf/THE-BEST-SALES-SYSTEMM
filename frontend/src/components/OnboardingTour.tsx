@@ -12,7 +12,6 @@ const steps: TourStep[] = [
   { target: 'topbar-actions', title: 'Common controls', body: 'Refresh data, switch between light and dark mode, and open notifications from the top bar.' },
   { target: 'notifications', title: 'Stay informed', body: 'The notification bell highlights important activity such as invoices, payments, low stock, overdue accounts, and system updates.' },
   { target: 'connection-status', title: 'Know your connection state', body: 'This indicator shows whether the system is online or offline. Offline drafts are stored safely and synchronize when the connection returns.' },
-  { target: 'mobile-actions', title: 'Fast actions on mobile', body: 'On a phone, use these quick actions to add an invoice, record a payment, add stock, check balances, or scan a barcode.' },
   { title: 'You are ready to begin', body: 'Start with Customers and Products, then create your first Invoice. You can reopen this tour later from the Help button in the workspace.' }
 ];
 
