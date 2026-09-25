@@ -184,11 +184,16 @@ async function refreshTokens(refreshToken: string): Promise<AuthTokens | null> {
 export const api = {
   baseUrl: apiBaseUrl,
   async loginPassword(requestBody: LoginRequest): Promise<AuthResponse> {
-    const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(`${apiBaseUrl}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+    } catch {
+      throw new Error(`Cannot connect to the Sales API at ${apiBaseUrl}.`);
+    }
     if (!response.ok) throw await toError(response);
     return (await response.json()) as AuthResponse;
   },

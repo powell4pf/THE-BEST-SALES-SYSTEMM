@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { z } from 'zod';
 import { useAuth } from '../context/AuthContext';
+import { isApiConnectivityError } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
@@ -54,7 +55,16 @@ export function LoginPage() {
   async function submitPassword(values: LoginValues) {
     setError(null);
     try {
-      await auth.loginWithPassword(values.email, values.password);
+      if (!navigator.onLine) {
+        await auth.unlockOffline(values.email, values.password);
+      } else {
+        try {
+          await auth.loginWithPassword(values.email, values.password);
+        } catch (error) {
+          if (!isApiConnectivityError(error)) throw error;
+          await auth.unlockOffline(values.email, values.password);
+        }
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
@@ -133,7 +143,7 @@ export function LoginPage() {
               {mode === 'login' ? 'Protected access' : 'New team account'}
             </div>
             <h2 className="mt-4 text-2xl font-semibold text-slate-950 dark:text-white">{mode === 'login' ? 'Sign in' : 'Create your account'}</h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{mode === 'login' ? 'Use your password or continue with Google to access the command center.' : 'Get started with a Viewer account. An administrator can update your role later.'}</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{mode === 'login' ? !navigator.onLine ? 'System offline. Use the password for an account previously enabled on this device.' : 'Use your password or continue with Google to access the command center.' : 'Get started with a Viewer account. An administrator can update your role later.'}</p>
           </div>
 
           {error ? <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">{error}</div> : null}
@@ -161,14 +171,16 @@ export function LoginPage() {
             </Button>
           </form>}
 
-          {mode === 'login' ? <div className="relative my-6">
+          {mode === 'login' && navigator.onLine ? <div className="relative my-6">
             <div className="absolute inset-x-0 top-1/2 border-t border-slate-200 dark:border-white/10" />
             <div className="relative mx-auto w-max bg-white px-4 text-xs uppercase tracking-[0.3em] text-slate-500 dark:bg-slate-950/90 dark:text-slate-400">Or continue with Google</div>
           </div> : null}
 
-          {mode === 'login' ? <div className="w-full">
+          {mode === 'login' && navigator.onLine ? <div className="w-full">
             <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
           </div> : null}
+
+          {mode === 'login' && !navigator.onLine ? <p className="mt-4 text-center text-xs text-amber-700 dark:text-amber-300">Offline access is available only for a password account that previously signed in successfully on this device. Cached data and new drafts will synchronize when the system reconnects.</p> : null}
 
           <div className="mt-6 border-t border-slate-200 pt-5 text-center text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
             {mode === 'login' ? 'New to Nurtured Choice?' : 'Already have an account?'}{' '}
