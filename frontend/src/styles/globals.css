@@ -420,6 +420,17 @@ a {
   backdrop-filter: blur(18px);
 }
 
+/* Native select menus need their own colour scheme: their options render outside
+   the page surface, so inherited dark text can otherwise appear on a white menu. */
+.dark .dashboard-period-select {
+  color-scheme: dark;
+}
+
+.dark .dashboard-period-select option {
+  background: #172033;
+  color: #f8fafc;
+}
+
 .dark .mobile-bottom-nav {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(11, 18, 32, 0.92);

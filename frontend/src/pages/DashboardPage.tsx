@@ -86,7 +86,7 @@ export function DashboardPage() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Sales are compared with the immediately preceding period of the same length.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-[180px_150px_150px]">
-            <Select value={dateFilter} onChange={(event) => setDateFilter(event.target.value as DateFilter)} aria-label="Dashboard date filter">
+            <Select className="dashboard-period-select" value={dateFilter} onChange={(event) => setDateFilter(event.target.value as DateFilter)} aria-label="Dashboard date filter">
               <option value="today">Today</option><option value="week">Last 7 days</option><option value="month">This month</option><option value="custom">Custom dates</option>
             </Select>
             <input type="date" value={dateRange.startDate} onChange={(event) => { setDateFilter('custom'); setCustomStartDate(event.target.value); }} disabled={dateFilter !== 'custom'} aria-label="Start date" className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white" />
