@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, Search, Sparkles, Users, PackageSearch, ShoppingCart, Settings, WalletCards } from 'lucide-react';
 import { Input } from './ui/input';
 import { cn } from '../lib/cn';
@@ -30,9 +30,14 @@ type Props = {
 
 export function CommandPalette({ open, query, onQueryChange, onSelect, onClose }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const filtered = items.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()) || item.description.toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => setSelectedIndex(0), [query, open]);
+  useEffect(() => {
+    if (!open) return;
+    resultsRef.current?.querySelector<HTMLElement>('[data-command-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [open, query, selectedIndex]);
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -48,8 +53,8 @@ export function CommandPalette({ open, query, onQueryChange, onSelect, onClose }
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/60 px-4 pt-24 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-[2rem] border border-white/10 bg-slate-950 p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex max-h-[calc(100dvh-3rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-white/10 px-2 pb-4">
           <Search className="h-4 w-4 text-slate-400" />
           <Input
@@ -60,7 +65,7 @@ export function CommandPalette({ open, query, onQueryChange, onSelect, onClose }
             className="border-0 bg-transparent px-0 text-white placeholder:text-slate-500 focus:ring-0"
           />
         </div>
-        <div className="mt-3 space-y-2">
+        <div ref={resultsRef} className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-400">No results found.</div>
           ) : (
@@ -68,6 +73,7 @@ export function CommandPalette({ open, query, onQueryChange, onSelect, onClose }
               <button
                 key={item.path}
                 onClick={() => onSelect(item.path)}
+                data-command-selected={index === selectedIndex}
                 className={cn('flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition hover:bg-white/10', index === selectedIndex && 'bg-white/10 ring-1 ring-white/15')}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">{item.icon}</div>
