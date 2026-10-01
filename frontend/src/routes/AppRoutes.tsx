@@ -21,6 +21,7 @@ const LoginPage = lazy(() => import('../pages/LoginPage').then((module) => ({ de
 const OfflineSyncPage = lazy(() => import('../pages/OfflineSyncPage').then((module) => ({ default: module.OfflineSyncPage })));
 const SystemHealthPage = lazy(() => import('../pages/SystemHealthPage').then((module) => ({ default: module.SystemHealthPage })));
 const SupportPage = lazy(() => import('../pages/SupportPage').then((module) => ({ default: module.SupportPage })));
+const ApprovalsPage = lazy(() => import('../pages/ApprovalsPage').then((module) => ({ default: module.ApprovalsPage })));
 
 function PageLoading() {
   return <div className="flex min-h-[18rem] items-center justify-center"><div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-300"><span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />Loading workspace...</div></div>;
@@ -55,6 +56,7 @@ export function AppRoutes() {
         <Route path="/offline-sync" element={<OfflineSyncPage />} />
         <Route path="/system-health" element={<SystemHealthPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

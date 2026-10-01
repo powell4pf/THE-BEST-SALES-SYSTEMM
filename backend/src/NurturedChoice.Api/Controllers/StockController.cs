@@ -15,11 +15,15 @@ public sealed class StockController : ControllerBase
 {
     private readonly IStockService _service;
     private readonly ICurrentUserService _currentUser;
+    private readonly IApprovalService _approvals;
+    private readonly IPermissionService _permissions;
 
-    public StockController(IStockService service, ICurrentUserService currentUser)
+    public StockController(IStockService service, ICurrentUserService currentUser, IApprovalService approvals, IPermissionService permissions)
     {
         _service = service;
         _currentUser = currentUser;
+        _approvals = approvals;
+        _permissions = permissions;
     }
 
     [HttpGet("dashboard")]
@@ -39,6 +43,12 @@ public sealed class StockController : ControllerBase
             return BadRequest(new ProblemDetails { Title = "Invalid stock adjustment", Detail = "Choose a product, enter a non-negative quantity, and provide a reason." });
         }
 
+        if (!await _permissions.HasPermissionAsync(_currentUser.UserId, "approvals.manage", cancellationToken))
+        {
+            var payload = System.Text.Json.JsonSerializer.Serialize(new { request.ProductId, request.AdjustedQuantity, request.Reason, request.Notes });
+            var approvalId = await _approvals.RequestAsync("StockAdjustment", request.ProductId, _currentUser.UserId!.Value, request.Reason, payload, cancellationToken);
+            return Accepted(new { approvalRequired = true, approvalId });
+        }
         var adjustment = await _service.CreateAdjustmentAsync(request, _currentUser.UserId, cancellationToken);
         return adjustment is null ? NotFound() : Ok(adjustment);
     }

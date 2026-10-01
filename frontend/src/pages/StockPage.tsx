@@ -31,7 +31,7 @@ export function StockPage() {
   const selectedProduct = useMemo(() => (productsQuery.data?.items ?? []).find((product) => product.id === productId), [productsQuery.data, productId]);
   const createAdjustment = useMutation({
     mutationFn: () => api.createStockAdjustment({ productId, adjustedQuantity: Number(adjustedQuantity), reason: reason.trim(), notes: notes.trim() || null }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['stockDashboard'] }),
         queryClient.invalidateQueries({ queryKey: ['products'] }),
@@ -42,6 +42,7 @@ export function StockPage() {
       setAdjustedQuantity('');
       setReason('');
       setNotes('');
+      if ('approvalRequired' in result && result.approvalRequired) window.dispatchEvent(new CustomEvent('nurtured-choice-toast', { detail: { tone: 'info', title: 'Approval requested', message: 'The stock adjustment is waiting for an authorized approver.' } }));
     }
   });
   const data = stockQuery.data;

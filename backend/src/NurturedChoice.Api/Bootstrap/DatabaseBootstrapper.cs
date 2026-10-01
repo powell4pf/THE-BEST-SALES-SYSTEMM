@@ -14,6 +14,51 @@ public static class DatabaseBootstrapper
 
         await SqlMigrationRunner.ApplyAsync(db);
 
+        // Existing EF-created databases use quoted PascalCase columns and may
+        // have marked SQL migrations as applied without running them. Add the
+        // security columns in that schema before authentication queries run.
+        await db.Database.ExecuteSqlRawAsync("""
+            alter table if exists app_users
+                add column if not exists "FailedLoginAttempts" integer not null default 0,
+                add column if not exists "LockedUntil" timestamptz null,
+                add column if not exists "LastLoginAt" timestamptz null;
+            create table if not exists security_audit_logs (
+                id uuid primary key,
+                user_id uuid null,
+                target_user_id uuid null,
+                event_type varchar(60) not null,
+                email varchar(150) null,
+                ip_address varchar(80) null,
+                user_agent varchar(500) null,
+                details varchar(1000) null,
+                succeeded boolean not null default false,
+                created_at timestamptz not null default now()
+            );
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            create table if not exists approval_requests (
+                id uuid primary key,
+                request_type varchar(60) not null,
+                entity_id uuid not null,
+                requested_by uuid not null,
+                status varchar(20) not null default 'Pending',
+                reason varchar(1000) null,
+                payload_json text not null default '{{}}',
+                reviewed_by uuid null,
+                reviewed_at timestamptz null,
+                decision_comment varchar(1000) null,
+                created_at timestamptz not null default now(),
+                created_by uuid null,
+                updated_at timestamptz null,
+                updated_by uuid null,
+                is_deleted boolean not null default false,
+                deleted_at timestamptz null,
+                deleted_by uuid null
+            );
+            create index if not exists ix_approval_requests_status_created on approval_requests(status, created_at desc);
+            """);
+
         // Older installations may have been created from the EF schema path,
         // which intentionally marks the baseline SQL migrations as applied.
         // Keep the collections feature deployable to those databases too.

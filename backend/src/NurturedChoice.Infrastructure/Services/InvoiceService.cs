@@ -152,6 +152,17 @@ public sealed class InvoiceService : IInvoiceService
         return true;
     }
 
+    public async Task<bool> CancelAsync(Guid id, Guid? userId, CancellationToken cancellationToken = default)
+    {
+        var invoice = await _db.Invoices.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
+        if (invoice is null || invoice.Status == InvoiceStatus.Cancelled || invoice.Status == InvoiceStatus.Paid) return false;
+        invoice.Status = InvoiceStatus.Cancelled;
+        invoice.UpdatedBy = userId;
+        invoice.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<bool> UpdateAsync(Guid id, CreateInvoiceRequest request, Guid? userId, CancellationToken cancellationToken = default)
     {
         var invoice = await _db.Invoices.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);

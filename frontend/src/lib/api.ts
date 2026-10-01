@@ -408,8 +408,8 @@ export const api = {
   async deleteInvoice(id: string): Promise<void> {
     await request<void>(`/api/v1/invoices/${id}`, { method: 'DELETE' });
   },
-  async finalizeInvoice(id: string): Promise<void> {
-    await request<void>(`/api/v1/invoices/${id}/finalize`, {
+  async finalizeInvoice(id: string): Promise<{ approvalRequired?: boolean }> {
+    return request<{ approvalRequired?: boolean }>(`/api/v1/invoices/${id}/finalize`, {
       method: 'POST'
     });
   },
@@ -431,6 +431,15 @@ export const api = {
   },
   async getRecentActivity(): Promise<RecentActivityItemDto[]> {
     return request<RecentActivityItemDto[]>('/api/v1/dashboard/recent-activity');
+  },
+  async getApprovals(): Promise<import('./apiTypes').ApprovalRequestDto[]> {
+    return request<import('./apiTypes').ApprovalRequestDto[]>('/api/v1/approvals');
+  },
+  async approveRequest(id: string, comment?: string): Promise<void> {
+    await request<void>(`/api/v1/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify({ comment: comment || null }) });
+  },
+  async rejectRequest(id: string, comment?: string): Promise<void> {
+    await request<void>(`/api/v1/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify({ comment: comment || null }) });
   },
   async getCompanyProfile(): Promise<CompanyProfileDto> {
     return request<CompanyProfileDto>('/api/v1/settings/company-profile');

@@ -15,12 +15,16 @@ public sealed class InvoicesController : ControllerBase
     private readonly IInvoiceService _invoiceService;
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService _notifications;
+    private readonly IApprovalService _approvals;
+    private readonly IPermissionService _permissions;
 
-    public InvoicesController(IInvoiceService invoiceService, ICurrentUserService currentUser, INotificationService notifications)
+    public InvoicesController(IInvoiceService invoiceService, ICurrentUserService currentUser, INotificationService notifications, IApprovalService approvals, IPermissionService permissions)
     {
         _invoiceService = invoiceService;
         _currentUser = currentUser;
         _notifications = notifications;
+        _approvals = approvals;
+        _permissions = permissions;
     }
 
     [HttpGet]
@@ -66,5 +70,22 @@ public sealed class InvoicesController : ControllerBase
     [HttpPost("{id:guid}/finalize")]
     [Permission("invoices.manage")]
     public async Task<IActionResult> FinalizeInvoice(Guid id, CancellationToken cancellationToken)
-        => await _invoiceService.FinalizeAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+    {
+        if (await _permissions.HasPermissionAsync(_currentUser.UserId, "approvals.manage", cancellationToken))
+            return await _invoiceService.FinalizeAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+        var invoice = await _invoiceService.GetByIdAsync(id, cancellationToken);
+        if (invoice is null) return NotFound();
+        var type = string.IsNullOrWhiteSpace(invoice.PaymentTerms) || invoice.PaymentTerms.Contains("cash", StringComparison.OrdinalIgnoreCase) ? "InvoiceFinalize" : "InvoiceCreditSale";
+        var approvalId = await _approvals.RequestAsync(type, id, _currentUser.UserId!.Value, "Invoice finalization requires approval.", "{}", cancellationToken);
+        return Accepted(new { approvalRequired = true, approvalId });
+    }
+
+    [HttpPost("{id:guid}/cancel"), Permission("invoices.manage")]
+    public async Task<IActionResult> CancelInvoice(Guid id, CancellationToken cancellationToken)
+    {
+        if (await _permissions.HasPermissionAsync(_currentUser.UserId, "approvals.manage", cancellationToken))
+            return await _invoiceService.CancelAsync(id, _currentUser.UserId, cancellationToken) ? NoContent() : NotFound();
+        var approvalId = await _approvals.RequestAsync("InvoiceCancellation", id, _currentUser.UserId!.Value, "Invoice cancellation requires approval.", "{}", cancellationToken);
+        return Accepted(new { approvalRequired = true, approvalId });
+    }
 }

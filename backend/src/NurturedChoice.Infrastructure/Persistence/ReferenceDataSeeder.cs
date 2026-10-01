@@ -37,6 +37,8 @@ public static class ReferenceDataSeeder
         ("settings.manage", "Manage Settings", "Can update company and system settings"),
         ("users.manage", "Manage Users", "Can manage users and roles"),
         ("users.delete", "Delete Users", "Can archive unwanted user accounts")
+        ,("approvals.view", "View Approvals", "Can view pending approval requests")
+        ,("approvals.manage", "Manage Approvals", "Can approve or reject protected actions")
     ];
 
     private static readonly string[] Roles =
@@ -126,7 +128,7 @@ public static class ReferenceDataSeeder
         // workspace user, so keep the visible Generate Invoice action usable
         // for existing Viewer accounts as well as Sales and Accounts users.
         var nonDestructivePermissions = permissionMap.Keys
-            .Where(key => !key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) && key is not "users.manage" and not "settings.manage" and not "support.manage")
+            .Where(key => !key.EndsWith(".delete", StringComparison.OrdinalIgnoreCase) && key is not "users.manage" and not "settings.manage" and not "support.manage" and not "approvals.manage")
             .ToArray();
         var restrictedRoleIds = roleMap
             .Where(entry => entry.Key is not "Super Administrator" and not "Administrator" and not "CEO")
@@ -160,7 +162,7 @@ public static class ReferenceDataSeeder
             }
         }
 
-        foreach (var permissionKey in new[] { "invoices.view", "invoices.manage", "statements.view", "statements.manage", "creditnotes.view", "creditnotes.manage", "reports.view", "settings.manage" })
+        foreach (var permissionKey in new[] { "invoices.view", "invoices.manage", "statements.view", "statements.manage", "creditnotes.view", "creditnotes.manage", "reports.view", "settings.manage", "approvals.view", "approvals.manage" })
         {
             if (accountsId != Guid.Empty && permissionMap.TryGetValue(permissionKey, out var permissionId))
             {

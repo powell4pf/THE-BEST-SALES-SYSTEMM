@@ -367,6 +367,7 @@ export type SalesTrendPointDto = { label: string; sales: number };
 export type ProductPerformanceDto = { productName: string; quantitySold: number; revenue: number };
 export type CustomerRevenueDto = { customerName: string; revenue: number };
 export type RecentActivityItemDto = { type: string; description: string; occurredAt: string; reference: string | null };
+export type ApprovalRequestDto = { id: string; requestType: string; entityId: string; requestedBy: string; requestedByName: string; status: string; reason: string | null; createdAt: string; reviewedAt: string | null; decisionComment: string | null };
 export type DashboardPeriodDto = {
   startDate: string;
   endDate: string;

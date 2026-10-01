@@ -6,6 +6,7 @@ using NurturedChoice.Domain.Entities.Identity;
 using NurturedChoice.Domain.Entities.Inventory;
 using NurturedChoice.Domain.Entities.Settings;
 using NurturedChoice.Domain.Entities.Support;
+using NurturedChoice.Domain.Entities.Workflow;
 using NurturedChoice.Application.Abstractions;
 
 namespace NurturedChoice.Infrastructure.Persistence;
@@ -51,6 +52,7 @@ public class SalesDbContext : DbContext, IUnitOfWork
     public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
+    public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -145,6 +147,25 @@ public class SalesDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<StockAdjustment>().ToTable("stock_adjustments");
         modelBuilder.Entity<SupportTicket>().ToTable("support_tickets");
         modelBuilder.Entity<SupportTicketMessage>().ToTable("support_ticket_messages");
+        modelBuilder.Entity<ApprovalRequest>().ToTable("approval_requests");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.Id).HasColumnName("id");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.RequestType).HasColumnName("request_type");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.EntityId).HasColumnName("entity_id");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.RequestedBy).HasColumnName("requested_by");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.Status).HasColumnName("status");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.Reason).HasColumnName("reason");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.PayloadJson).HasColumnName("payload_json");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.ReviewedBy).HasColumnName("reviewed_by");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.ReviewedAt).HasColumnName("reviewed_at");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.DecisionComment).HasColumnName("decision_comment");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.CreatedAt).HasColumnName("created_at");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.CreatedBy).HasColumnName("created_by");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.IsDeleted).HasColumnName("is_deleted");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        modelBuilder.Entity<ApprovalRequest>().Property(x => x.DeletedBy).HasColumnName("deleted_by");
+        modelBuilder.Entity<ApprovalRequest>().HasIndex(x => new { x.Status, x.CreatedAt });
         modelBuilder.Entity<SupportTicket>().Property(x => x.Id).HasColumnName("id");
         modelBuilder.Entity<SupportTicket>().Property(x => x.TicketNumber).HasColumnName("ticket_number").HasMaxLength(24);
         modelBuilder.Entity<SupportTicket>().Property(x => x.AppUserId).HasColumnName("app_user_id");

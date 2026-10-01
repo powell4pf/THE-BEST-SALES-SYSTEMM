@@ -30,6 +30,7 @@ const navigation = [
   { label: 'Offline Sync', path: '/offline-sync', icon: RefreshCw },
   { label: 'System Health', path: '/system-health', icon: Activity },
   { label: 'Help & Support', path: '/support', icon: LifeBuoy },
+  { label: 'Approvals', path: '/approvals', icon: ClipboardCheck, approverOnly: true },
   { label: 'Audit Log', path: '/audit-log', icon: ShieldAlert, adminOnly: true },
   { label: 'Settings', path: '/settings', icon: Settings }
 ];
@@ -56,7 +57,7 @@ export function Sidebar({ currentPath, onNavigate, collapsed, onToggleCollapsed,
       </div>
 
       <nav className="flex-1 space-y-1 pr-1" data-onboarding="navigation">
-        {navigation.filter((item) => !item.adminOnly || hasFullAdministrativeAccess(auth.user?.roles ?? [])).map((item) => {
+        {navigation.filter((item) => (!item.adminOnly || hasFullAdministrativeAccess(auth.user?.roles ?? [])) && (!item.approverOnly || hasFullAdministrativeAccess(auth.user?.roles ?? []) || (auth.user?.roles ?? []).includes('Accounts'))).map((item) => {
           const Icon = item.icon;
           const active = currentPath === item.path;
           return (

@@ -8,4 +8,5 @@ public interface IStockService
     Task<StockDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default);
     Task<PagedResult<StockMovementListItemDto>> GetMovementsAsync(Guid? productId, PagedRequest request, CancellationToken cancellationToken = default);
     Task<StockAdjustmentDto?> CreateAdjustmentAsync(CreateStockAdjustmentRequest request, Guid? userId, CancellationToken cancellationToken = default);
+    Task<StockAdjustmentDto?> ApplyApprovedAdjustmentAsync(Guid productId, decimal adjustedQuantity, string reason, string? notes, Guid? userId, CancellationToken cancellationToken = default);
 }

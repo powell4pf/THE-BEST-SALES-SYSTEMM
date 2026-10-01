@@ -307,8 +307,8 @@ export function InvoicesPage() {
         if (isApiConnectivityError(error)) return saveOffline();
         throw error;
       }
-      if (finalize) await api.finalizeInvoice(invoiceId);
-      return { id: invoiceId, offline: false, finalized: finalize };
+       const finalizeResult = finalize ? await api.finalizeInvoice(invoiceId) : undefined;
+       return { id: invoiceId, offline: false, finalized: finalize, approvalRequired: Boolean(finalizeResult?.approvalRequired) };
     },
     onSuccess: async (result) => {
       if (result.offline) {
@@ -317,6 +317,9 @@ export function InvoicesPage() {
         setEditingId(null);
         reset(emptyValues('', customers, products));
         return;
+      }
+      if (result.approvalRequired) {
+        window.dispatchEvent(new CustomEvent('nurtured-choice-toast', { detail: { tone: 'info', title: 'Approval requested', message: 'The invoice was saved as a draft and is waiting for an authorized approver.' } }));
       }
       await queryClient.invalidateQueries({ queryKey: ['invoices'] });
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });

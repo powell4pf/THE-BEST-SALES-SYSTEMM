@@ -152,4 +152,7 @@ public sealed class StockService : IStockService
             return new StockAdjustmentDto(adjustment.Id, product.Id, product.ProductName, previousQuantity, request.AdjustedQuantity, changeQuantity, adjustment.Reason, adjustment.Notes, adjustment.CreatedAt);
         });
     }
+
+    public Task<StockAdjustmentDto?> ApplyApprovedAdjustmentAsync(Guid productId, decimal adjustedQuantity, string reason, string? notes, Guid? userId, CancellationToken cancellationToken = default)
+        => CreateAdjustmentAsync(new CreateStockAdjustmentRequest(productId, adjustedQuantity, reason, notes), userId, cancellationToken);
 }
