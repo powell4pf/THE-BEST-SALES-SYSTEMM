@@ -23,6 +23,7 @@ import { BarcodeScanner } from '../components/BarcodeScanner';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 const defaultInvoiceNote = 'Thank you for doing business with us.';
+const formatSalesperson = (value?: string | null) => `SALESPERSON: ${value?.trim() || 'N/A'}`;
 
 function today() {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -448,7 +449,7 @@ export function InvoicesPage() {
               <p class="value">${branch?.branchName ?? 'Unknown branch'}</p>
               <p class="value">${branch?.address ?? ''}</p>
               <p class="value">${branch?.contactPerson ?? ''}</p>
-              <p class="value">${invoice.salesperson}</p>
+              <p class="value">${formatSalesperson(invoice.salesperson)}</p>
             </div>
           </div>
 

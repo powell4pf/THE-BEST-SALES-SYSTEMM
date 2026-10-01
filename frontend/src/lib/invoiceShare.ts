@@ -54,6 +54,10 @@ function formatContact(customer?: InvoiceCustomer) {
     .join('\n');
 }
 
+function formatSalesperson(value?: string | null) {
+  return `SALESPERSON: ${value?.trim() || 'N/A'}`;
+}
+
 function formatBranch(branch?: InvoiceBranch, salesperson?: string | null) {
   return [branch?.branchName, branch?.address, branch?.contactPerson, salesperson]
     .filter((value): value is string => Boolean(value?.trim()))
@@ -151,7 +155,7 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
 
   const customerValues = [customer?.companyName, customer?.contactPerson, customer?.email, customer?.phone, customer?.address]
     .filter((value): value is string => Boolean(value?.trim()));
-  const branchValues = [branch?.branchName, branch?.address, branch?.contactPerson, invoice.salesperson]
+  const branchValues = [branch?.branchName, branch?.address, branch?.contactPerson, formatSalesperson(invoice.salesperson)]
     .filter((value): value is string => Boolean(value?.trim()));
   const cardHeight = Math.max(
     drawDetailsCard(margin, 'Bill To', customerValues.length ? customerValues : ['Customer details unavailable']),
