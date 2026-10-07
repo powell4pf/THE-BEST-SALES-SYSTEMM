@@ -136,8 +136,8 @@ export async function downloadStatementPdf(statement: StatementForPrint): Promis
   const headerHeight = 57;
   const availableRowsHeight = Math.max(1, bottom - contentStart - headerHeight);
   const rowHeight = lines.length ? Math.min(8, availableRowsHeight / lines.length) : 6;
-  const rowFontSize = Math.max(0.5, Math.min(9, rowHeight * 0.72));
-  const headingFontSize = Math.max(2.5, Math.min(14, rowFontSize * 1.8, contentWidth / Math.max(1, title.length * 0.48)));
+  const rowFontSize = Math.max(2.5, Math.min(9, rowHeight * 1.05));
+  const headingFontSize = Math.max(4, Math.min(14, rowFontSize * 1.8, contentWidth / Math.max(1, title.length * 0.48)));
 
   let y = contentStart;
   pdf.setTextColor(17, 24, 39);
@@ -213,7 +213,9 @@ export function openStatementPrintWindow(statement: StatementForPrint): void {
   const rows = lines.map((transaction) => `<tr><td>${new Intl.DateTimeFormat('en-GB').format(new Date(`${transaction.date}T00:00:00`))}</td><td>${escapePrintHtml(transaction.document || '-')}</td><td>${escapePrintHtml(transaction.description || '-')}</td><td class="amount">${money.format(transaction.debit)}</td></tr>`).join('');
   const total = lines.reduce((sum, transaction) => sum + transaction.debit, 0);
 
-  const compactFont = Math.max(0.5, Math.min(12, 170 / (lines.length + 10)));
+  // The letterhead has roughly 700 printable CSS pixels below its header.
+  // This keeps ordinary statements readable and only compresses genuinely long ones.
+  const compactFont = Math.max(4, Math.min(11, 500 / Math.max(1, lines.length + 8)));
   const title = `ACCOUNT STATEMENT FOR ${period}.`;
   const compactHeading = Math.max(2.5, Math.min(16, compactFont * 1.8, 660 / Math.max(1, title.length * 0.55)));
   const compactPadding = Math.max(0, compactFont * 0.35);
