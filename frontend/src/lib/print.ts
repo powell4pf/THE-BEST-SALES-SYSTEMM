@@ -60,6 +60,24 @@ export type StatementForPrint = {
   transactions: Array<{ date: string; document: string; description: string; debit: number; credit: number; balance: number }>;
 };
 
+function statementPeriod(startDate: string, endDate: string): string {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const months: string[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+
+  while (cursor <= last) {
+    months.push(new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(cursor).toUpperCase());
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  const years = start.getFullYear() === end.getFullYear()
+    ? String(start.getFullYear())
+    : `${start.getFullYear()}-${end.getFullYear()}`;
+  return `${months.join(', ')} ${years}`;
+}
+
 function safeFilename(value: string) {
   return value.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'statement';
 }
@@ -91,11 +109,11 @@ export async function downloadStatementPdf(statement: StatementForPrint): Promis
   const letterhead = await loadLetterheadDataUrl();
   const contentStart = letterhead ? 61 : 36;
   const today = new Intl.DateTimeFormat('en-GB').format(new Date());
-  const period = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' })
-    .format(new Date(`${statement.startDate}T00:00:00`)).toUpperCase();
+  const period = statementPeriod(statement.startDate, statement.endDate);
   const money = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
   const lines = statement.transactions.filter((transaction) => transaction.document !== 'OPENING' && transaction.debit > 0);
   const total = lines.reduce((sum, transaction) => sum + transaction.debit, 0);
+  const title = `ACCOUNT STATEMENT FOR ${period}.`;
 
   const drawPage = () => {
     if (letterhead) {
@@ -114,6 +132,13 @@ export async function downloadStatementPdf(statement: StatementForPrint): Promis
   };
 
   drawPage();
+  const bottom = pageHeight - 23;
+  const headerHeight = 57;
+  const availableRowsHeight = Math.max(1, bottom - contentStart - headerHeight);
+  const rowHeight = lines.length ? Math.min(8, availableRowsHeight / lines.length) : 6;
+  const rowFontSize = Math.max(0.5, Math.min(9, rowHeight * 0.72));
+  const headingFontSize = Math.max(2.5, Math.min(14, rowFontSize * 1.8, contentWidth / Math.max(1, title.length * 0.48)));
+
   let y = contentStart;
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'normal');
@@ -129,8 +154,8 @@ export async function downloadStatementPdf(statement: StatementForPrint): Promis
   pdf.text('Att: Account payables', margin, y);
   y += 13;
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.text(`ACCOUNT STATEMENT FOR ${period}.`, margin, y);
+  pdf.setFontSize(headingFontSize);
+  pdf.text(title, margin, y);
   y += 10;
 
   const columns = [margin, margin + 34, margin + 72, pageWidth - margin];
@@ -138,39 +163,28 @@ export async function downloadStatementPdf(statement: StatementForPrint): Promis
     pdf.setDrawColor(17, 24, 39);
     pdf.line(margin, y - 4, pageWidth - margin, y - 4);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
+    pdf.setFontSize(Math.max(1.5, rowFontSize * 0.88));
     pdf.text('DATE', columns[0], y);
     pdf.text('INVOICE.NO', columns[1], y);
     pdf.text('BRANCH', columns[2], y);
     pdf.text('AMOUNT', columns[3], y, { align: 'right' });
     pdf.line(margin, y + 3, pageWidth - margin, y + 3);
-    y += 9;
+    y += Math.max(1.5, rowHeight);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    pdf.setFontSize(rowFontSize);
   };
   drawTableHeader();
 
   lines.forEach((transaction) => {
-    if (y > pageHeight - 28) {
-      pdf.addPage();
-      drawPage();
-      y = contentStart;
-      drawTableHeader();
-    }
     pdf.text(new Intl.DateTimeFormat('en-GB').format(new Date(`${transaction.date}T00:00:00`)), columns[0], y);
     pdf.text(transaction.document || '-', columns[1], y);
-    pdf.text(pdf.splitTextToSize(transaction.description || '-', 55), columns[2], y);
+    pdf.text(pdf.splitTextToSize(transaction.description || '-', 55)[0] || '-', columns[2], y);
     pdf.text(money.format(transaction.debit), columns[3], y, { align: 'right' });
     pdf.setDrawColor(203, 213, 225);
-    pdf.line(margin, y + 3, pageWidth - margin, y + 3);
-    y += 8;
+    pdf.line(margin, y + Math.max(0.4, rowHeight * 0.38), pageWidth - margin, y + Math.max(0.4, rowHeight * 0.38));
+    y += rowHeight;
   });
 
-  if (y > pageHeight - 48) {
-    pdf.addPage();
-    drawPage();
-    y = contentStart;
-  }
   pdf.setDrawColor(17, 24, 39);
   pdf.line(margin, y, pageWidth - margin, y);
   y += 8;
@@ -193,13 +207,17 @@ function escapePrintHtml(value: string) {
 
 export function openStatementPrintWindow(statement: StatementForPrint): void {
   const today = new Intl.DateTimeFormat('en-GB').format(new Date());
-  const period = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(new Date(`${statement.startDate}T00:00:00`)).toUpperCase();
+  const period = statementPeriod(statement.startDate, statement.endDate);
   const money = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
   const lines = statement.transactions.filter((transaction) => transaction.document !== 'OPENING' && transaction.debit > 0);
   const rows = lines.map((transaction) => `<tr><td>${new Intl.DateTimeFormat('en-GB').format(new Date(`${transaction.date}T00:00:00`))}</td><td>${escapePrintHtml(transaction.document || '-')}</td><td>${escapePrintHtml(transaction.description || '-')}</td><td class="amount">${money.format(transaction.debit)}</td></tr>`).join('');
   const total = lines.reduce((sum, transaction) => sum + transaction.debit, 0);
 
-  openLetterheadPrintWindow(`Account Statement - ${statement.customerName}`, `<div class="statement-heading"><p>Dear sir/Madam,</p><p class="customer">${escapePrintHtml(statement.customerName.toUpperCase())}.</p><p><strong>DATE.</strong>${today}</p><p><strong>Att:</strong> Account payables</p><h1>ACCOUNT STATEMENT FOR ${period}.</h1></div><table class="statement-table"><thead><tr><th>DATE</th><th>INVOICE.NO</th><th>BRANCH</th><th class="amount">AMOUNT</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No transactions recorded for this period.</td></tr>'}<tr class="total"><td colspan="3">TOTAL</td><td class="amount">${money.format(total)}</td></tr></tbody></table><div class="closing"><p>Thanks in advance.</p><p>Priscilla Nzalu</p></div>`, `.statement-heading{font-size:13px;line-height:1.35}.statement-heading p{margin:0 0 7px}.statement-heading .customer{font-weight:700;margin-top:14px}.statement-heading h1{font-size:16px;margin:22px 0 16px}.statement-table{width:100%;border-collapse:collapse;font-size:12px}.statement-table th,.statement-table td{padding:7px 6px;border-bottom:1px solid #111;text-align:left}.statement-table th{border-top:1px solid #111}.statement-table .amount{text-align:right}.statement-table .total td{font-weight:700;border-top:1px solid #111;border-bottom:0;padding-top:11px}.closing{font-size:13px;margin-top:28px}.closing p{margin:0 0 28px}`);
+  const compactFont = Math.max(0.5, Math.min(12, 170 / (lines.length + 10)));
+  const title = `ACCOUNT STATEMENT FOR ${period}.`;
+  const compactHeading = Math.max(2.5, Math.min(16, compactFont * 1.8, 660 / Math.max(1, title.length * 0.55)));
+  const compactPadding = Math.max(0, compactFont * 0.35);
+  openLetterheadPrintWindow(`Account Statement - ${statement.customerName}`, `<div class="statement-heading"><p>Dear sir/Madam,</p><p class="customer">${escapePrintHtml(statement.customerName.toUpperCase())}.</p><p><strong>DATE.</strong>${today}</p><p><strong>Att:</strong> Account payables</p><h1>${escapePrintHtml(title)}</h1></div><table class="statement-table"><thead><tr><th>DATE</th><th>INVOICE.NO</th><th>BRANCH</th><th class="amount">AMOUNT</th></tr></thead><tbody>${rows || '<tr><td colspan="4">No transactions recorded for this period.</td></tr>'}<tr class="total"><td colspan="3">TOTAL</td><td class="amount">${money.format(total)}</td></tr></tbody></table><div class="closing"><p>Thanks in advance.</p><p>Priscilla Nzalu</p></div>`, `.letterhead-page{overflow:hidden}.letterhead-content{overflow:hidden}.statement-heading{font-size:${compactFont}px;line-height:1.1}.statement-heading p{margin:0 0 ${compactPadding}px}.statement-heading .customer{font-weight:700;margin-top:${compactPadding * 1.5}px}.statement-heading h1{font-size:${compactHeading}px;margin:${compactPadding * 2}px 0 ${compactPadding}px;white-space:normal;overflow-wrap:anywhere}.statement-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:${compactFont}px}.statement-table th,.statement-table td{height:${Math.max(0.5, compactFont * 1.35)}px;padding:${compactPadding}px ${Math.max(0, compactPadding * .85)}px;border-bottom:1px solid #111;text-align:left;line-height:1;white-space:nowrap;overflow:hidden}.statement-table th{border-top:1px solid #111}.statement-table .amount{text-align:right}.statement-table .total td{font-weight:700;border-top:1px solid #111;border-bottom:0;padding-top:${compactPadding}px}.closing{font-size:${compactFont}px;margin-top:${compactPadding * 2}px}.closing p{margin:0 0 ${compactPadding * 2}px}`);
 }
 
 const baseStyles = `
