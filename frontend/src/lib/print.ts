@@ -230,16 +230,19 @@ const baseStyles = `
   .letterhead-page {
     position: relative;
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
     margin: 0;
     background: #fff url('${LETTERHEAD_URL}') center top / 210mm 297mm no-repeat;
+    overflow: hidden;
     page-break-after: always;
     break-after: page;
   }
   .letterhead-page:last-child { page-break-after: auto; break-after: auto; }
   .letterhead-content {
-    min-height: 297mm;
+    height: 297mm;
     padding: 61mm 18mm 18mm;
+    overflow: visible;
+    transform-origin: top center;
   }
   table { page-break-inside: auto; }
   tr { page-break-inside: avoid; break-inside: avoid; }
@@ -264,7 +267,20 @@ export function openLetterheadPrintWindow(title: string, body: string, styles = 
   printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
-  const print = () => printWindow.print();
+  const fitToOnePage = () => {
+    const page = printWindow.document.querySelector<HTMLElement>('.letterhead-page');
+    const content = printWindow.document.querySelector<HTMLElement>('.letterhead-content');
+    if (page && content) {
+      // Keep the document on one physical A4 page. The content is authored at a
+      // readable size first, then reduced only by the amount actually needed.
+      const contentHeight = content.scrollHeight;
+      const availableHeight = page.clientHeight;
+      const scale = contentHeight > availableHeight ? availableHeight / contentHeight : 1;
+      content.style.transform = `scale(${scale})`;
+    }
+    printWindow.print();
+  };
+  const print = () => printWindow.setTimeout(fitToOnePage, 0);
   if (printWindow.document.fonts?.ready) {
     printWindow.document.fonts.ready.then(print).catch(print);
   } else {

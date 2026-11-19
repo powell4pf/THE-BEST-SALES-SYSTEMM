@@ -181,19 +181,34 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   pdf.text('Total', totalX, y + 4.8, { align: 'right' });
   y += headerHeight;
 
-  invoice.items.forEach((item) => {
+  // Calculate all rows before drawing them so the item table and the notes box
+  // share the available A4 height instead of spilling beyond the page.
+  const rowMetrics = invoice.items.map((item) => {
     const nameLines = pdf.splitTextToSize(item.itemName || item.productName || 'Invoice item', 82);
-    const rowHeight = Math.max(7, nameLines.length * 4 + 3);
+    return { nameLines, baseHeight: Math.max(7, nameLines.length * 4 + 3) };
+  });
+  const notesLineCount = pdf.splitTextToSize(invoice.notes?.trim() || defaultInvoiceNote, contentWidth - 12).length;
+  const reservedHeight = 13 + 13 + Math.max(22, 13 + notesLineCount * 4) + 25;
+  const availableRowsHeight = Math.max(1, pageHeight - 25 - y - reservedHeight);
+  const rowScale = rowMetrics.length
+    ? Math.min(1, availableRowsHeight / rowMetrics.reduce((sum, row) => sum + row.baseHeight, 0))
+    : 1;
+  const rowFontSize = Math.max(4.5, Math.min(7.5, 7.5 * rowScale));
+
+  invoice.items.forEach((item, index) => {
+    const { nameLines, baseHeight } = rowMetrics[index];
+    const rowHeight = Math.max(3.2, baseHeight * rowScale);
     pdf.setDrawColor(229, 231, 235);
     pdf.rect(margin, y, contentWidth, rowHeight, 'S');
     pdf.setTextColor(17, 24, 39);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7.5);
-    pdf.text(nameLines, productX, y + 4.8);
+    pdf.setFontSize(rowFontSize);
+    const rowBaseline = y + Math.min(rowHeight - 1, rowFontSize * 0.9);
+    pdf.text(nameLines.slice(0, Math.max(1, Math.floor(rowHeight / Math.max(2.5, rowFontSize * 0.75)))), productX, rowBaseline);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(String(item.quantity), qtyX, y + 4.8, { align: 'right' });
-    pdf.text(money(item.unitPrice), unitX, y + 4.8, { align: 'right' });
-    pdf.text(money(item.quantity * item.unitPrice), totalX, y + 4.8, { align: 'right' });
+    pdf.text(String(item.quantity), qtyX, rowBaseline, { align: 'right' });
+    pdf.text(money(item.unitPrice), unitX, rowBaseline, { align: 'right' });
+    pdf.text(money(item.quantity * item.unitPrice), totalX, rowBaseline, { align: 'right' });
     y += rowHeight;
   });
 
@@ -208,17 +223,18 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   y += 13;
 
   const notes = pdf.splitTextToSize(invoice.notes?.trim() || defaultInvoiceNote, contentWidth - 12);
-  const notesHeight = Math.max(22, 13 + notes.length * 4);
+  const notesFontSize = Math.max(5.5, Math.min(8, 8 * Math.max(0.7, rowScale)));
+  const notesHeight = Math.max(16, 10 + notes.length * Math.max(2.8, notesFontSize * 0.65));
   pdf.setFillColor(248, 250, 252);
   pdf.setDrawColor(229, 231, 235);
   pdf.roundedRect(margin, y, contentWidth, notesHeight, 4, 4, 'FD');
   pdf.setTextColor(17, 24, 39);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
-  pdf.text('Notes', margin + 5, y + 8.5);
+  pdf.setFontSize(notesFontSize);
+  pdf.text('Notes', margin + 5, y + Math.min(8.5, notesFontSize + 1));
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.text(notes, margin + 5, y + 16);
+  pdf.setFontSize(notesFontSize);
+  pdf.text(notes, margin + 5, y + Math.min(15, notesFontSize + 7));
 
   pdf.setDrawColor(226, 232, 240);
   pdf.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);

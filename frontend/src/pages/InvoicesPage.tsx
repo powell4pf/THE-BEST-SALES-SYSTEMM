@@ -24,6 +24,7 @@ import { BarcodeScanner } from '../components/BarcodeScanner';
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
 const defaultInvoiceNote = 'Thank you for doing business with us.';
 const formatSalesperson = (value?: string | null) => `SALESPERSON: ${value?.trim() || 'N/A'}`;
+const escapePrintHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character);
 
 function today() {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -393,32 +394,34 @@ export function InvoicesPage() {
     const customer = findCustomer(invoice.parentGroupId);
     const branch = customer?.branches.find((item) => item.id === invoice.branchId);
     const invoiceTotal = invoice.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    const itemCount = invoice.items.length;
+    const rowPadding = Math.max(2, Math.min(8, 180 / Math.max(1, itemCount)));
 
     const styles = `
             body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; color: #111827; background: #fff; }
-            .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
-            .invoice-title { font-size: 28px; font-weight: 700; margin: 0; }
+            .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+            .invoice-title { font-size: 25px; font-weight: 700; margin: 0; }
             .lpo-number { margin: 5px 0 0; font-size: 11px; font-weight: 700; color: #475569; }
             .invoice-meta { text-align: right; }
             .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 4px; }
             .value { font-size: 14px; font-weight: 600; color: #111827; margin: 0; }
-            .section { margin-bottom: 24px; }
-            .section h3 { margin: 0 0 12px 0; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: #111827; }
-            .grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .details { padding: 16px; border: 1px solid #e5e7eb; border-radius: 16px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-            th, td { padding: 12px 10px; border: 1px solid #e5e7eb; }
-            th { background: #f8fafc; font-size: 12px; text-align: left; color: #374151; }
-            td { font-size: 13px; color: #111827; }
+            .section { margin-bottom: 12px; }
+            .section h3 { margin: 0 0 8px 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #111827; }
+            .grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .details { padding: 10px; border: 1px solid #e5e7eb; border-radius: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+            th, td { padding: ${rowPadding}px 7px; border: 1px solid #e5e7eb; }
+            th { background: #f8fafc; font-size: 11px; text-align: left; color: #374151; }
+            td { font-size: 11px; color: #111827; overflow-wrap: anywhere; }
             .text-right { text-align: right; }
-            .summary { width: 320px; margin-left: auto; margin-top: 16px; }
-            .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+            .summary { width: 320px; margin-left: auto; margin-top: 10px; }
+            .summary-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
             .summary-row strong { color: #111827; }
-            .notes { margin-top: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 16px; background: #f8fafc; }
-            .invoice-header { margin-bottom: 20px; }
-            .section { margin-bottom: 16px; }
-            th, td { padding: 8px 7px; }
-            td { font-size: 11px; }
+            .notes { margin-top: 10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f8fafc; }
+            .invoice-header { margin-bottom: 14px; }
+            .section { margin-bottom: 10px; }
+            th, td { padding: ${rowPadding}px 7px; }
+            td { font-size: 10.5px; }
             .product-name { font-weight: 700; color: #111827; }
             .details { padding: 12px; }
             .notes { margin-top: 16px; padding: 12px; }
@@ -427,32 +430,32 @@ export function InvoicesPage() {
           <div class="invoice-header">
             <div>
               <p class="label">Invoice</p>
-              <h1 class="invoice-title">${invoice.invoiceNumber}</h1>
-              <p class="lpo-number">LPO No: ${invoice.lpoNumber || 'Not provided'}</p>
+              <h1 class="invoice-title">${escapePrintHtml(invoice.invoiceNumber)}</h1>
+              <p class="lpo-number">LPO No: ${escapePrintHtml(invoice.lpoNumber || 'Not provided')}</p>
             </div>
             <div class="invoice-meta">
               <p class="label">Date</p>
-              <p class="value">${invoice.invoiceDate}</p>
+              <p class="value">${escapePrintHtml(invoice.invoiceDate)}</p>
               <p class="label">Due</p>
-              <p class="value">${invoice.dueDate}</p>
+              <p class="value">${escapePrintHtml(invoice.dueDate || 'Not specified')}</p>
             </div>
           </div>
 
           <div class="grid">
             <div class="details">
               <h3>Bill To</h3>
-              <p class="value">${customer?.companyName ?? 'Unknown customer'}</p>
-              <p class="value">${customer?.contactPerson ?? ''}</p>
-              <p class="value">${customer?.email ?? ''}</p>
-              <p class="value">${customer?.phone ?? ''}</p>
-              <p class="value">${customer?.address ?? ''}</p>
+              <p class="value">${escapePrintHtml(customer?.companyName ?? 'Unknown customer')}</p>
+              <p class="value">${escapePrintHtml(customer?.contactPerson ?? '')}</p>
+              <p class="value">${escapePrintHtml(customer?.email ?? '')}</p>
+              <p class="value">${escapePrintHtml(customer?.phone ?? '')}</p>
+              <p class="value">${escapePrintHtml(customer?.address ?? '')}</p>
             </div>
             <div class="details">
               <h3>Branch</h3>
-              <p class="value">${branch?.branchName ?? 'Unknown branch'}</p>
-              <p class="value">${branch?.address ?? ''}</p>
-              <p class="value">${branch?.contactPerson ?? ''}</p>
-              <p class="value">${formatSalesperson(invoice.salesperson)}</p>
+              <p class="value">${escapePrintHtml(branch?.branchName ?? 'Unknown branch')}</p>
+              <p class="value">${escapePrintHtml(branch?.address ?? '')}</p>
+              <p class="value">${escapePrintHtml(branch?.contactPerson ?? '')}</p>
+              <p class="value">${escapePrintHtml(formatSalesperson(invoice.salesperson))}</p>
             </div>
           </div>
 
@@ -469,8 +472,8 @@ export function InvoicesPage() {
               <tbody>
                 ${invoice.items.map((item) => `
                   <tr>
-                    <td class="product-name">${item.itemName}</td>
-                    <td style="text-align: right;">${item.quantity}</td>
+                    <td class="product-name">${escapePrintHtml(item.itemName || item.productName || 'Invoice item')}</td>
+                    <td style="text-align: right;">${escapePrintHtml(String(item.quantity))}</td>
                     <td style="text-align: right;">KES ${currency.format(item.unitPrice)}</td>
                     <td style="text-align: right;">KES ${currency.format(item.quantity * item.unitPrice)}</td>
                   </tr>
@@ -485,7 +488,7 @@ export function InvoicesPage() {
 
           <div class="notes">
             <p><strong>Notes</strong></p>
-            <p>${invoice.notes || defaultInvoiceNote}</p>
+            <p>${escapePrintHtml(invoice.notes || defaultInvoiceNote)}</p>
           </div>
     `;
     openLetterheadPrintWindow(`Print Invoice ${invoice.invoiceNumber}`, body, styles);
