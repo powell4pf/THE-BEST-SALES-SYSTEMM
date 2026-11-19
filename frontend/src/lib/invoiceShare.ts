@@ -23,7 +23,6 @@ export type InvoicePdfData = {
 export type InvoiceShareResult = 'shared' | 'downloaded';
 
 const currency = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 });
-const defaultInvoiceNote = 'Thank you for doing business with us.';
 
 function money(value: number) {
   return `KES ${currency.format(value)}`;
@@ -181,14 +180,13 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   pdf.text('Total', totalX, y + 4.8, { align: 'right' });
   y += headerHeight;
 
-  // Calculate all rows before drawing them so the item table and the notes box
-  // share the available A4 height instead of spilling beyond the page.
+  // Calculate all rows before drawing them so the item table stays within the
+  // available A4 height and the letterhead boundary remains visible.
   const rowMetrics = invoice.items.map((item) => {
     const nameLines = pdf.splitTextToSize(item.itemName || item.productName || 'Invoice item', 82);
     return { nameLines, baseHeight: Math.max(7, nameLines.length * 4 + 3) };
   });
-  const notesLineCount = pdf.splitTextToSize(invoice.notes?.trim() || defaultInvoiceNote, contentWidth - 12).length;
-  const reservedHeight = 13 + 13 + Math.max(22, 13 + notesLineCount * 4) + 25;
+  const reservedHeight = 13 + 13 + 25;
   const availableRowsHeight = Math.max(1, pageHeight - 25 - y - reservedHeight);
   const rowScale = rowMetrics.length
     ? Math.min(1, availableRowsHeight / rowMetrics.reduce((sum, row) => sum + row.baseHeight, 0))
@@ -221,20 +219,6 @@ export async function createInvoicePdf({ invoice, customer, branch }: InvoicePdf
   pdf.setFontSize(11);
   pdf.text(money(total), pageWidth - margin, y + 7, { align: 'right' });
   y += 13;
-
-  const notes = pdf.splitTextToSize(invoice.notes?.trim() || defaultInvoiceNote, contentWidth - 12);
-  const notesFontSize = Math.max(5.5, Math.min(8, 8 * Math.max(0.7, rowScale)));
-  const notesHeight = Math.max(16, 10 + notes.length * Math.max(2.8, notesFontSize * 0.65));
-  pdf.setFillColor(248, 250, 252);
-  pdf.setDrawColor(229, 231, 235);
-  pdf.roundedRect(margin, y, contentWidth, notesHeight, 4, 4, 'FD');
-  pdf.setTextColor(17, 24, 39);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(notesFontSize);
-  pdf.text('Notes', margin + 5, y + Math.min(8.5, notesFontSize + 1));
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(notesFontSize);
-  pdf.text(notes, margin + 5, y + Math.min(15, notesFontSize + 7));
 
   pdf.setDrawColor(226, 232, 240);
   pdf.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);

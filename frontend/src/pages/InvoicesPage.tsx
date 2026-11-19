@@ -417,14 +417,12 @@ export function InvoicesPage() {
             .summary { width: 320px; margin-left: auto; margin-top: 10px; }
             .summary-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
             .summary-row strong { color: #111827; }
-            .notes { margin-top: 10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f8fafc; }
             .invoice-header { margin-bottom: 14px; }
             .section { margin-bottom: 10px; }
             th, td { padding: ${rowPadding}px 7px; }
             td { font-size: 10.5px; }
             .product-name { font-weight: 700; color: #111827; }
             .details { padding: 12px; }
-            .notes { margin-top: 16px; padding: 12px; }
           `;
     const body = `
           <div class="invoice-header">
@@ -486,10 +484,6 @@ export function InvoicesPage() {
             <div class="summary-row"><span>Total</span><strong>KES ${currency.format(invoiceTotal)}</strong></div>
           </div>
 
-          <div class="notes">
-            <p><strong>Notes</strong></p>
-            <p>${escapePrintHtml(invoice.notes || defaultInvoiceNote)}</p>
-          </div>
     `;
     openLetterheadPrintWindow(`Print Invoice ${invoice.invoiceNumber}`, body, styles);
   }
